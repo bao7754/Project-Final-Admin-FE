@@ -26,7 +26,6 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
     defaultValues: {
       name: '',
       description: '',
-      price: '',
       cookingTime: '',
       servings: '',
       step: '',
@@ -76,7 +75,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
     const recipeData = {
       ...data,
-      price: parseInt(data.price, 10),
+      price: null,
       ingredients: filteredIngredients,
       imageUrls: filteredImages,
       categoryIds: selectedCategories,
@@ -142,20 +141,6 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
         {/* Thông tin cơ bản */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Giá (VNĐ) *
-            </label>
-            <input
-              type="number"
-              {...register('price', {
-                required: 'Giá là bắt buộc',
-                min: { value: 0, message: 'Giá phải lớn hơn 0' }
-              })}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.price ? 'border-red-300' : 'border-gray-300'}`}
-            />
-            {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>}
-          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Thời gian nấu *

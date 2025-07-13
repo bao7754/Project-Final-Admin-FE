@@ -31,7 +31,6 @@ const RecipeEdit = () => {
     defaultValues: {
       name: '',
       description: '',
-      price: '',
       cookingTime: '',
       servings: '',
     },
@@ -54,7 +53,6 @@ const RecipeEdit = () => {
     if (!recipe) return;
     setValue('name', recipe.name || '');
     setValue('description', recipe.description || '');
-    setValue('price', recipe.price || '');
     setValue('cookingTime', recipe.cookingTime || '');
     setValue('servings', recipe.servings || '');
     setIngredients(recipe.ingredients?.length > 0 ? recipe.ingredients : ['']);
@@ -182,7 +180,7 @@ const RecipeEdit = () => {
       const recipeData = {
         name: data.name || '',
         description: data.description || '',
-        price: parseInt(data.price, 10) || 0,
+        price: null,
         cookingTime: data.cookingTime || '',
         servings: data.servings || '',
         ingredients: ingredients.filter(ingredient => ingredient.trim() !== ''),
@@ -345,21 +343,7 @@ const RecipeEdit = () => {
                 {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Giá (VNĐ) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    {...register('price', {
-                      required: 'Giá là bắt buộc',
-                      min: { value: 0, message: 'Giá phải lớn hơn 0' },
-                    })}
-                    className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 ${errors.price ? 'border-red-300' : 'border-gray-200'}`}
-                    placeholder="0"
-                  />
-                  {errors.price && <p className="mt-1 text-sm text-red-500">{errors.price.message}</p>}
-                </div>
+      
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Thời gian nấu <span className="text-red-500">*</span>

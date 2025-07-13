@@ -210,19 +210,7 @@ const RecipeDetail = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-4 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-full mr-3">
-                    <FiDollarSign className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 font-medium">Chi phí</p>
-                    <p className="font-bold text-lg">
-                      {recipe.price ? recipe.price.toLocaleString('vi-VN') + 'đ' : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          
             </div>
 
             {/* Description */}
