@@ -5,6 +5,7 @@ import { FiHome, FiPieChart, FiBook, FiUsers, FiSettings } from 'react-icons/fi'
 const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', icon: <FiPieChart />, path: '/dashboard' },
+    { name: 'Danh mục ', icon: <FiHome />, path: '/categories' },
     { name: 'Công thức', icon: <FiBook />, path: '/recipes' },
     { name: 'Người dùng', icon: <FiUsers />, path: '/users' },
     { name: 'Cài đặt', icon: <FiSettings />, path: '/settings' },

@@ -4,13 +4,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Recipes from './pages/Recipes';
-import RecipeDetail from './pages/RecipeDetail';
-import RecipeEdit from './pages/RecipeEdit';
 import useAuthStore from './store/authStore';
-import CreateRecipe from './pages/CreateRecipe';
+
+import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
+// Recipe imports
+import CreateRecipe from './pages/Recipe/CreateRecipe';
+import RecipeDetail from './pages/Recipe/RecipeDetail';
+import RecipeEdit from './pages/Recipe/RecipeEdit';
+import Recipes from './pages/Recipe/Recipes';
+// Category imports
+import Category from './pages/Category/Category';
+// User imports
+import UserList from './pages/User/User';
+import UserDetail from './pages/User/DetailUser';
+// Special imports
+import AddStep from './pages/Steps/AddSpes';
+
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,9 +48,27 @@ const App = () => {
       <Navbar />
       {isAuthenticated && <Sidebar />}
       <Routes>
-        <Route path="/" element={<Navigate to="/recipes" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/recipes/:id" element={<RecipeDetail />} />
+        <Route
+          path="/categories"
+          element={
+            <ProtectedRoute>
+              <Category />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/users" element={
+          <ProtectedRoute>
+            <UserList />
+          </ProtectedRoute>
+        } />
+        <Route path="/users/:id" element={
+          <ProtectedRoute>
+            <UserDetail />
+          </ProtectedRoute>
+        } />
         <Route path="/login" element={<Login />} /><Route
           path="/dashboard"
           element={
@@ -61,6 +90,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <CreateRecipe />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recipes/:id/add-step"
+          element={
+            <ProtectedRoute>
+              <AddStep />
             </ProtectedRoute>
           }
         />

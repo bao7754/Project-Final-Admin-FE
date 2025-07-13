@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { FiSave, FiX, FiPlus } from 'react-icons/fi';
 import { useCategories } from '../hooks/useCategories';
 import { useCreateRecipe } from '../hooks/useRecipes';
@@ -9,15 +9,19 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
   const { user } = useAuthStore();
   const { data: categories = [] } = useCategories();
   const createMutation = useCreateRecipe();
+
+  // State cho nguyên liệu, danh mục, link ảnh, lỗi tổng
   const [ingredients, setIngredients] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [imageUrls, setImageUrls] = useState(['']);
+  const [formError, setFormError] = useState('');
 
+  // Form hook
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
-    reset
+    reset,
   } = useForm({
     defaultValues: {
       name: '',
@@ -25,72 +29,91 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
       price: '',
       cookingTime: '',
       servings: '',
-      instructions: '',
-      videoUrl: '',
-      step: ''
-    }
+      step: '',
+    },
   });
 
-  const addIngredient = () => {
-    setIngredients([...ingredients, '']);
-  };
-
-  const removeIngredient = (index) => {
-    const newIngredients = ingredients.filter((_, i) => i !== index);
-    setIngredients(newIngredients);
-  };
-
+  // Nguyên liệu
+  const addIngredient = () => setIngredients([...ingredients, '']);
+  const removeIngredient = (index) =>
+    setIngredients(ingredients.filter((_, i) => i !== index));
   const updateIngredient = (index, value) => {
-    const newIngredients = [...ingredients];
-    newIngredients[index] = value;
-    setIngredients(newIngredients);
+    const arr = [...ingredients];
+    arr[index] = value;
+    setIngredients(arr);
   };
 
+  // Ảnh minh họa
+  const addImageUrl = () => setImageUrls([...imageUrls, '']);
+  const removeImageUrl = (index) =>
+    setImageUrls(imageUrls.filter((_, i) => i !== index));
+  const updateImageUrl = (index, value) => {
+    const arr = [...imageUrls];
+    arr[index] = value;
+    setImageUrls(arr);
+  };
+
+  // Danh mục
   const handleCategoryChange = (categoryId) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
+  // Submit
   const onSubmit = (data) => {
+    setFormError('');
+    // Validate: ít nhất 1 nguyên liệu
+    const filteredIngredients = ingredients.filter(i => i.trim() !== '');
+    if (filteredIngredients.length === 0) {
+      setFormError('Cần nhập ít nhất 1 nguyên liệu!');
+      return;
+    }
+    // Validate: nếu có link ảnh thì phải hợp lệ (có thể mở rộng sau)
+    const filteredImages = imageUrls.filter(url => url.trim() !== '');
+
     const recipeData = {
       ...data,
-      price: parseInt(data.price),
-      ingredients: ingredients.filter(ingredient => ingredient.trim() !== ''),
+      price: parseInt(data.price, 10),
+      ingredients: filteredIngredients,
+      imageUrls: filteredImages,
       categoryIds: selectedCategories,
-      idUser: user?._id,
+      idUser: user?._id || user?.id || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      approvedAt: null
+      approvedAt: null,
     };
 
     createMutation.mutate(recipeData, {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        console.log('API trả về khi tạo công thức:', response); // LOG RESPONSE Ở ĐÂY!
+        const newId = response?._id || response?.id;
         reset();
         setIngredients(['']);
+        setImageUrls(['']);
         setSelectedCategories([]);
-        onSuccess?.();
+        onSuccess?.(newId);
+      },
+      onError: (error) => {
+        setFormError(error?.message || 'Có lỗi xảy ra khi lưu công thức!');
       }
     });
+
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Tạo công thức mới</h2>
-        <button
-          onClick={onCancel}
-          className="p-2 text-gray-500 hover:text-gray-700"
-        >
+        <button onClick={onCancel} className="p-2 text-gray-500 hover:text-gray-700">
           <FiX className="h-6 w-6" />
         </button>
       </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {formError && <div className="text-red-600 font-semibold mb-2">{formError}</div>}
+
         {/* Tên công thức */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -98,13 +121,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
           </label>
           <input
             type="text"
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.name ? 'border-red-300' : 'border-gray-300'
-              }`}
             {...register('name', { required: 'Tên công thức là bắt buộc' })}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.name ? 'border-red-300' : 'border-gray-300'}`}
           />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
+          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
         </div>
 
         {/* Mô tả */}
@@ -114,13 +134,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
           </label>
           <textarea
             rows={3}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.description ? 'border-red-300' : 'border-gray-300'
-              }`}
             {...register('description', { required: 'Mô tả là bắt buộc' })}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.description ? 'border-red-300' : 'border-gray-300'}`}
           />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
-          )}
+          {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>}
         </div>
 
         {/* Thông tin cơ bản */}
@@ -131,59 +148,47 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
             </label>
             <input
               type="number"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.price ? 'border-red-300' : 'border-gray-300'
-                }`}
               {...register('price', {
                 required: 'Giá là bắt buộc',
                 min: { value: 0, message: 'Giá phải lớn hơn 0' }
               })}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.price ? 'border-red-300' : 'border-gray-300'}`}
             />
-            {errors.price && (
-              <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
-            )}
+            {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Thời gian nấu *
             </label>
             <input
               type="text"
-              placeholder="VD: 30 phút"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.cookingTime ? 'border-red-300' : 'border-gray-300'
-                }`}
               {...register('cookingTime', { required: 'Thời gian nấu là bắt buộc' })}
+              placeholder="VD: 30 phút"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.cookingTime ? 'border-red-300' : 'border-gray-300'}`}
             />
-            {errors.cookingTime && (
-              <p className="mt-1 text-sm text-red-600">{errors.cookingTime.message}</p>
-            )}
+            {errors.cookingTime && <p className="mt-1 text-sm text-red-600">{errors.cookingTime.message}</p>}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Khẩu phần *
             </label>
             <input
               type="text"
-              placeholder="VD: 4 người"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.servings ? 'border-red-300' : 'border-gray-300'
-                }`}
               {...register('servings', { required: 'Khẩu phần là bắt buộc' })}
+              placeholder="VD: 4 người"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.servings ? 'border-red-300' : 'border-gray-300'}`}
             />
-            {errors.servings && (
-              <p className="mt-1 text-sm text-red-600">{errors.servings.message}</p>
-            )}
+            {errors.servings && <p className="mt-1 text-sm text-red-600">{errors.servings.message}</p>}
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Số bước
             </label>
             <input
               type="text"
+              {...register('step')}
               placeholder="VD: 5 bước"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-              {...register('step')}
             />
           </div>
         </div>
@@ -208,7 +213,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
           </div>
         </div>
 
-        {/* Nguyên liệu */}
+        {/* NGUYÊN LIỆU */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Nguyên liệu
@@ -219,7 +224,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                 <input
                   type="text"
                   value={ingredient}
-                  onChange={(e) => updateIngredient(index, e.target.value)}
+                  onChange={e => updateIngredient(index, e.target.value)}
                   placeholder={`Nguyên liệu ${index + 1}`}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
@@ -245,36 +250,51 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
           </div>
         </div>
 
-        {/* Hướng dẫn */}
+        {/* ẢNH MINH HOẠ */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Hướng dẫn nấu ăn *
+            Ảnh minh họa (nhiều link)
           </label>
-          <textarea
-            rows={6}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${errors.instructions ? 'border-red-300' : 'border-gray-300'
-              }`}
-            {...register('instructions', { required: 'Hướng dẫn nấu ăn là bắt buộc' })}
-          />
-          {errors.instructions && (
-            <p className="mt-1 text-sm text-red-600">{errors.instructions.message}</p>
-          )}
+          {imageUrls.map((url, idx) => (
+            <div key={idx} className="flex items-center gap-2 mb-2">
+              <input
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                value={url}
+                onChange={e => updateImageUrl(idx, e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+              />
+              {url && (
+                <img
+                  src={url}
+                  alt="Preview"
+                  className="h-12 w-12 object-cover rounded border border-gray-200"
+                  onError={e => (e.currentTarget.style.display = 'none')}
+                />
+              )}
+              {imageUrls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeImageUrl(idx)}
+                  className="p-2 text-red-500 hover:text-red-700"
+                  title="Xoá"
+                >
+                  <FiX className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addImageUrl}
+            className="flex items-center space-x-2 text-amber-600 hover:text-amber-700"
+          >
+            <FiPlus className="h-4 w-4" />
+            <span>Thêm link ảnh</span>
+          </button>
         </div>
 
-        {/* Video URL */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Link video hướng dẫn
-          </label>
-          <input
-            type="url"
-            placeholder="https://example.com/video.mp4"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-            {...register('videoUrl')}
-          />
-        </div>
-
-        {/* Buttons */}
+        {/* Nút */}
         <div className="flex justify-end space-x-4 pt-6">
           <button
             type="button"

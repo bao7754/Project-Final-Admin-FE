@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import RecipeForm from '../components/RecipeForm';
+import RecipeForm from '../../components/RecipeForm';
 
 const CreateRecipe = () => {
   const navigate = useNavigate();
@@ -9,8 +9,12 @@ const CreateRecipe = () => {
     navigate('/recipes');
   };
 
-  const handleSuccess = () => {
-    navigate('/recipes');
+   const handleSuccess = (id) => {
+    if (id) {
+      navigate(`/recipes/${id}/add-step`);
+    } else {
+      navigate('/recipes');
+    }
   };
 
   return (

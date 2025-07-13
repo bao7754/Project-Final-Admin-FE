@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { FiSearch, FiPlus, FiCheckCircle, FiTag, FiUsers, FiClock, FiEdit } from 'react-icons/fi';
-import { useRecipes } from '../hooks/useRecipes';
-import RecipeFilters from '../components/RecipeFilters';
-import Loading from '../components/Loading';
-import useAuthStore from '../store/authStore';
-import ImageUploaderModal from '../components/ImageUploader';
-import { useApproveRecipe } from '../hooks/useRecipes';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { FiSearch, FiPlus, FiCheckCircle, FiTag, FiUsers, FiClock, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { useDeleteRecipe, useRecipes, useDeleteStep } from '../../hooks/useRecipes'; // Import the new hook
+import RecipeFilters from '../../components/RecipeFilters';
+import Loading from '../../components/Loading';
+import useAuthStore from '../../store/authStore';
+import { useApproveRecipe } from '../../hooks/useRecipes';
 
 const Recipes = () => {
   const [page, setPage] = useState(1);
@@ -14,60 +13,78 @@ const Recipes = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [showApproved, setShowApproved] = useState('all');
-  const [selectedRecipeId, setSelectedRecipeId] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [recipes, setRecipes] = useState([]);
-
+  const navigate = useNavigate();
+  const location = useLocation();
   const { data, isLoading, error } = useRecipes(page);
   const { isAuthenticated } = useAuthStore();
-
   const approveMutation = useApproveRecipe();
+  const deleteRecipe = useDeleteRecipe();
+  const deleteRecipeSteps = useDeleteStep(); // Initialize the new hook
 
-  useMemo(() => {
+  useEffect(() => {
+    if (location.state?.fromCreateRecipe) {
+      console.log('Returning from create recipe, resetting page to 1 and showApproved to all');
+      setPage(1);
+      setShowApproved('all');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
+  useEffect(() => {
+    console.log('Recipes API data:', data?.data);
     if (data?.data) {
+      console.log('Setting recipes:', data.data);
       setRecipes(data.data);
+    } else {
+      console.log('No data, setting recipes to empty');
+      setRecipes([]);
     }
   }, [data?.data]);
 
   const filteredAndSortedRecipes = useMemo(() => {
-    if (!recipes) return [];
+    if (!recipes) {
+      console.log('No recipes to filter');
+      return [];
+    }
 
     let filtered = recipes.filter(recipe => {
-      const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
-
+      const matchesSearch = recipe.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recipe.description?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = !selectedCategory ||
-        recipe.categoryIds.some(cat => cat.id === selectedCategory);
-
+        (recipe.categoryIds && recipe.categoryIds.includes(selectedCategory));
       const matchesApproval = showApproved === 'all' ||
         (showApproved === 'approved' && recipe.approvedAt) ||
         (showApproved === 'pending' && !recipe.approvedAt);
-
+      console.log(`Filter check for recipe "${recipe.name || 'unknown'}":`, {
+        matchesSearch,
+        matchesCategory,
+        matchesApproval,
+        searchTerm,
+        selectedCategory,
+        showApproved,
+        approvedAt: recipe.approvedAt,
+      });
       return matchesSearch && matchesCategory && matchesApproval;
     });
 
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'name':
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
+        case 'newest': return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'oldest': return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'price-low': return a.price - b.price;
+        case 'price-high': return b.price - a.price;
+        case 'name': return a.name.localeCompare(b.name);
+        default: return 0;
       }
     });
-
+    console.log('Filtered and sorted recipes:', filtered);
     return filtered;
   }, [recipes, searchTerm, selectedCategory, sortBy, showApproved]);
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleApprove = (recipeId) => {
@@ -80,16 +97,30 @@ const Recipes = () => {
   };
 
   const handleEditRecipe = (recipeId) => {
-    setSelectedRecipeId(recipeId);
-    setIsModalOpen(true);
+    navigate(`/recipes/edit/${recipeId}`);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleDeleteRecipe = async (recipeId) => {
+    if (window.confirm('Bạn có chắc muốn xóa công thức này và tất cả các bước của nó không?')) {
+      try {
+        // First, delete all steps associated with the recipe
+        await deleteRecipeSteps.mutateAsync(recipeId);
+        // Then, delete the recipe
+        deleteRecipe.mutate(recipeId, {
+          onSuccess: () => {
+            setRecipes(prevRecipes => prevRecipes.filter(recipe => recipe._id !== recipeId));
+          },
+        });
+      } catch (error) {
+        console.error('Error deleting recipe and steps:', error);
+      }
+    }
   };
 
   if (isLoading) return <Loading />;
-  if (error) return <div className="text-red-600">Có lỗi xảy ra khi tải dữ liệu!</div>;
+  if (error) return <div className="text-red-600 text-center py-8">Có lỗi xảy ra khi tải dữ liệu: {error.message}</div>;
+
+  const totalPages = data?.pagination?.totalPages || 1;
 
   return (
     <div className="container mx-auto px-4 py-8 pt-20 md:pl-72">
@@ -97,7 +128,10 @@ const Recipes = () => {
         <h1 className="text-3xl font-bold text-gray-900">Công thức nấu ăn</h1>
         {isAuthenticated && (
           <Link
-            to="/recipes/create"
+            to={{
+              pathname: '/recipes/create',
+              state: { fromCreateRecipe: true }
+            }}
             className="flex items-center space-x-2 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
           >
             <FiPlus className="h-4 w-4" />
@@ -128,7 +162,7 @@ const Recipes = () => {
         onApprovedChange={setShowApproved}
       />
 
-      {filteredAndSortedRecipes.length === 0 ? (
+      {(!filteredAndSortedRecipes || filteredAndSortedRecipes.length === 0) ? (
         <div className="text-center py-8">
           <p className="text-gray-500">Không tìm thấy công thức nào phù hợp.</p>
         </div>
@@ -139,14 +173,12 @@ const Recipes = () => {
               Hiển thị {filteredAndSortedRecipes.length} công thức
             </p>
           </div>
-
-          {/* Display Recipes in Row Layout */}
           <div className="flex flex-col gap-6">
             {filteredAndSortedRecipes.map((recipe) => (
               <div key={recipe._id} className="bg-white rounded-lg shadow-md overflow-hidden p-4">
                 <div className="flex mb-4">
                   <img
-                    src={recipe.imageUrls[0] || 'https://via.placeholder.com/150'}
+                    src={recipe.imageUrls?.[0] || 'https://via.placeholder.com/150'}
                     alt={recipe.name}
                     className="w-32 h-32 object-cover rounded-md mr-4"
                   />
@@ -164,10 +196,9 @@ const Recipes = () => {
                       </div>
                       <div className="flex items-center text-gray-500 text-sm">
                         <FiTag className="mr-1" />
-                        <span>{recipe.price.toLocaleString('vi-VN')} VNĐ</span>
+                        <span>{recipe.price?.toLocaleString('vi-VN') || 0} VNĐ</span>
                       </div>
                     </div>
-
                     <div className="flex justify-between items-center">
                       <Link
                         to={`/recipes/${recipe._id}`}
@@ -175,7 +206,6 @@ const Recipes = () => {
                       >
                         Xem chi tiết
                       </Link>
-                      {/* Approval Button */}
                       <button
                         onClick={() => handleApprove(recipe._id)}
                         className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 focus:outline-none"
@@ -183,18 +213,25 @@ const Recipes = () => {
                       >
                         <FiCheckCircle className="h-5 w-5" />
                       </button>
-
-                      <button
-                        onClick={() => handleEditRecipe(recipe._id)}
-                        className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none"
-                        title="Cập nhật công thức"
-                      >
-                        <FiEdit className="h-5 w-5" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDeleteRecipe(recipe._id)}
+                          className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none"
+                          title="Xóa công thức"
+                        >
+                          <FiTrash2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleEditRecipe(recipe._id)}
+                          className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none"
+                          title="Cập nhật công thức"
+                        >
+                          <FiEdit className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2">
                   {recipe.approvedAt ? (
                     <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
@@ -209,10 +246,9 @@ const Recipes = () => {
               </div>
             ))}
           </div>
-
-          {data?.pagination && data.pagination.totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex justify-center mt-8">
-              {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
@@ -227,14 +263,6 @@ const Recipes = () => {
             </div>
           )}
         </>
-      )}
-
-      {isModalOpen && selectedRecipeId && (
-        <ImageUploaderModal
-          recipeId={selectedRecipeId}
-          currentImages={filteredAndSortedRecipes.find(r => r._id === selectedRecipeId)?.imageUrls || []}
-          onClose={handleCloseModal}
-        />
       )}
     </div>
   );
