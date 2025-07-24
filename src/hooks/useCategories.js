@@ -7,7 +7,7 @@ export const useCategories = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: ['categories', page, limit],
     queryFn: () => categoriesApi.getCategories(page, limit),
-    staleTime: 1000 * 60 * 10, // 10 phút
+    staleTime: 1000 * 60 * 10, 
   });
 };
 

@@ -14,7 +14,7 @@ const Recipes = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [showApproved, setShowApproved] = useState('all');
   const [recipes, setRecipes] = useState([]);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const { data, isLoading, error } = useRecipes(page);
@@ -43,6 +43,8 @@ const Recipes = () => {
   }, [data?.data]);
 
   // Memoized filtered and sorted recipes
+  // Cập nhật phần filteredAndSortedRecipes với logic filter được sửa
+
   const filteredAndSortedRecipes = useMemo(() => {
     if (!recipes || recipes.length === 0) {
       return [];
@@ -50,19 +52,34 @@ const Recipes = () => {
 
     let filtered = recipes.filter(recipe => {
       // Search filter
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         recipe.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipe.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Category filter
-      const matchesCategory = !selectedCategory ||
-        (recipe.categoryIds && recipe.categoryIds.includes(selectedCategory));
-      
+
+      // Category filter - Sửa lại logic này
+      let matchesCategory = true;
+      if (selectedCategory) {
+        if (recipe.categoryIds && Array.isArray(recipe.categoryIds)) {
+          // Trường hợp categoryIds là array of objects
+          if (recipe.categoryIds.length > 0 && typeof recipe.categoryIds[0] === 'object') {
+            matchesCategory = recipe.categoryIds.some(cat =>
+              cat.id === selectedCategory || cat._id === selectedCategory || cat.name === selectedCategory
+            );
+          }
+          // Trường hợp categoryIds là array of strings
+          else {
+            matchesCategory = recipe.categoryIds.includes(selectedCategory);
+          }
+        } else {
+          matchesCategory = false;
+        }
+      }
+
       // Approval filter
       const matchesApproval = showApproved === 'all' ||
         (showApproved === 'approved' && recipe.approvedAt) ||
         (showApproved === 'pending' && !recipe.approvedAt);
-      
+
       return matchesSearch && matchesCategory && matchesApproval;
     });
 
@@ -98,8 +115,8 @@ const Recipes = () => {
       onSuccess: () => {
         setRecipes(prevRecipes =>
           prevRecipes.map(recipe =>
-            recipe._id === recipeId 
-              ? { ...recipe, approvedAt: new Date().toISOString() } 
+            recipe._id === recipeId
+              ? { ...recipe, approvedAt: new Date().toISOString() }
               : recipe
           )
         );
@@ -128,7 +145,7 @@ const Recipes = () => {
         console.warn('Failed to delete steps (this might be expected if cascade delete is set up):', stepError);
         // Continue with recipe deletion even if step deletion fails
       }
-      
+
       // Delete the recipe
       deleteRecipe.mutate(recipeId, {
         onSuccess: () => {
@@ -234,11 +251,10 @@ const Recipes = () => {
                   <button
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
-                    className={`px-3 py-1 rounded-md transition-colors ${
-                      pageNum === page
+                    className={`px-3 py-1 rounded-md transition-colors ${pageNum === page
                         ? 'bg-amber-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                    }`}
+                      }`}
                   >
                     {pageNum}
                   </button>
@@ -272,7 +288,7 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {recipe.description || 'No description available'}
           </p>
-          
+
           {/* Recipe meta info */}
           <div className="flex flex-wrap gap-3 mb-4">
             <div className="flex items-center text-gray-500 text-sm">
@@ -293,7 +309,7 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
             >
               Xem chi tiết
             </Link>
-            
+
             <div className="flex gap-2">
               <button
                 onClick={() => onApprove(recipe._id)}
@@ -303,7 +319,7 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
               >
                 <FiCheckCircle className="h-5 w-5" />
               </button>
-              
+
               <button
                 onClick={() => onEdit(recipe._id)}
                 className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
@@ -311,7 +327,7 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
               >
                 <FiEdit className="h-5 w-5" />
               </button>
-              
+
               <button
                 onClick={() => onDelete(recipe._id)}
                 className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
@@ -326,11 +342,10 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
 
       {/* Status badge */}
       <div className="flex items-center space-x-2">
-        <span className={`text-xs px-2 py-1 rounded-full ${
-          isApproved
+        <span className={`text-xs px-2 py-1 rounded-full ${isApproved
             ? 'bg-green-100 text-green-800'
             : 'bg-yellow-100 text-yellow-800'
-        }`}>
+          }`}>
           {isApproved ? 'Đã duyệt' : 'Chưa duyệt'}
         </span>
       </div>

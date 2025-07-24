@@ -141,10 +141,6 @@ const UserDetail = () => {
               {user.fullName || '—'}
             </motion.h1>
             
-            <div className="flex items-center gap-3 text-gray-600 text-sm font-medium bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-2 rounded-full shadow-sm border border-indigo-100">
-              <FiShield className="text-indigo-500" size={16} />
-              <span>ID: {user._id}</span>
-            </div>
           </motion.div>
 
           {/* User Details Grid */}

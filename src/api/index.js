@@ -127,3 +127,10 @@ export const categoriesApi = {
     return data;
   },
 };
+
+export const favoritesApi ={
+  getFavoriteApi: async () => {
+    const {data} = await api.get('/api/favorites');
+    return data
+  }
+}
