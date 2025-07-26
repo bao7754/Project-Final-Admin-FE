@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
@@ -21,8 +21,6 @@ import UserDetail from './pages/User/DetailUser';
 // Special imports
 import AddStep from './pages/Steps/AddSpes';
 
-
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -32,95 +30,49 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  return <>{children}</>;
-};
-
 const App = () => {
   const { isAuthenticated } = useAuthStore();
 
-  return (<QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <Navbar />
-      {isAuthenticated && <Sidebar />}
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/recipes" element={<Recipes />} />
-        <Route path="/recipes/:id" element={<RecipeDetail />} />
-        <Route
-          path="/categories"
-          element={
-            <ProtectedRoute>
-              <Category />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/users" element={
-          <ProtectedRoute>
-            <UserList />
-          </ProtectedRoute>
-        } />
-        <Route path="/users/:id" element={
-          <ProtectedRoute>
-            <UserDetail />
-          </ProtectedRoute>
-        } />
-        <Route path="/login" element={<Login />} /><Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recipes/edit/:id"
-          element={
-            <ProtectedRoute>
-              <RecipeEdit />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recipes/create"
-          element={
-            <ProtectedRoute>
-              <CreateRecipe />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recipes/:id/add-step"
-          element={
-            <ProtectedRoute>
-              <AddStep />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
-    <Toaster
-      position="top-right" toastOptions={{
-        duration: 3000,
-        style: {
-          background: '#363636', color: '#fff',
-        }, success: {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Navbar />
+        {isAuthenticated && <Sidebar />}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/recipes" element={<Recipes />} />
+          <Route path="/recipes/:id" element={<RecipeDetail />} />
+          <Route path="/categories" element={<Category />} />
+          <Route path="/users" element={<UserList />} />
+          <Route path="/users/:id" element={<UserDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
+          <Route path="/recipes/create" element={<CreateRecipe />} />
+          <Route path="/recipes/:id/add-step" element={<AddStep />} />
+        </Routes>
+      </BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
           style: {
-            background: '#22c55e',
+            background: '#363636',
+            color: '#fff',
           },
-        },
-        error: {
-          style: {
-            background: '#ef4444',
+          success: {
+            style: {
+              background: '#22c55e',
+            },
           },
-        },
-      }}
-    />
-  </QueryClientProvider>
+          error: {
+            style: {
+              background: '#ef4444',
+            },
+          },
+        }}
+      />
+    </QueryClientProvider>
   );
 };
 

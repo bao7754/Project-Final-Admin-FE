@@ -1,19 +1,15 @@
-// src/api/index.js
 import axios from 'axios';
 
 const API_URL = 'https://thangphan300724.id.vn';
 
-// Axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    console.log('Using token:', token); // Log token for debugging
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,19 +18,11 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Auth API
 export const authApi = {
   login: async (credentials) => {
     const { data } = await api.post('/api/admins/login', credentials);
@@ -51,7 +39,6 @@ export const authApi = {
   },
 };
 
-// Recipes API
 export const recipesApi = {
   getRecipes: async (page = 1, limit = 10) => {
     const { data } = await api.get(`/api/recipes/?page=${page}&limit=${limit}`);
@@ -68,23 +55,17 @@ export const recipesApi = {
   },
 
   approveRecipe: async (id) => {
-    console.log('[API] Gửi yêu cầu duyệt recipe với id:', id);
     const { data } = await api.patch(`/api/recipes/${id}`);
-    console.log('[API] Kết quả trả về:', data);
     return data;
   },
 
   deleteRecipe: async (id) => {
-    console.log('[API] Gửi yêu cầu xóa recipe với id:', id);
     const { data } = await api.delete(`/api/recipes/${id}`);
-    console.log('[API] Kết quả trả về:', data);
     return data;
   },
 
   createRecipe: async (recipeData) => {
-    console.log('[API] Gửi data:', recipeData);
     const { data } = await api.post('/api/recipes', recipeData);
-    console.log('[API] Nhận về:', data);
     return data;
   },
 
@@ -94,7 +75,6 @@ export const recipesApi = {
   },
 
   addStep: async (stepData) => {
-    // Đúng route /api/steps/ theo RESTful
     const { data } = await api.post('/api/steps/', stepData);
     return data;
   },
@@ -128,9 +108,34 @@ export const categoriesApi = {
   },
 };
 
-export const favoritesApi ={
+export const favoritesApi = {
   getFavoriteApi: async () => {
-    const {data} = await api.get('/api/favorites');
-    return data
-  }
-}
+    const { data } = await api.get('/api/favorites');
+    return data;
+  },
+};
+
+export const mediaApi = {
+  createImage: async (formData) => {
+    try {
+      const { data } = await api.post('/media', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data;
+    } catch (error) {
+      if (error.response?.status === 401) {
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+      throw error;
+    }
+  },
+};
+
+export const premiumUsers = {
+  premiumUsers: async () => {
+    const { data } = await api.get('/api/admins/analytics');
+    return data;
+  },
+};

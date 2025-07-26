@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiSave, FiX, FiPlus, FiTag, FiAward, FiUpload, FiMove, FiCamera, FiTrash2 } from 'react-icons/fi';
 import { useRecipe, useUpdateRecipe, useRecipeSteps, useUpdateStep, useAddStep } from '../../hooks/useRecipes';
 import { useCategories } from '../../hooks/useCategories';
-import { uploadImageToCloudinary, validateImageFile, } from '../../utils/cloudinaryUpload';
+import { useUploadImage } from '../../hooks/useUploadImage';
 import Loading from '../../components/Loading';
 
 const RecipeEdit = () => {
@@ -15,9 +15,10 @@ const RecipeEdit = () => {
   const updateRecipe = useUpdateRecipe();
   const updateStep = useUpdateStep();
   const addStepMutation = useAddStep();
+  const uploadImageMutation = useUploadImage();
   const navigate = useNavigate();
 
-  // File input refs - FIX: Use separate refs for each recipe image
+  // File input refs
   const recipeImageInputRefs = useRef({});
   const stepImageInputRefs = useRef({});
 
@@ -28,10 +29,9 @@ const RecipeEdit = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [draggedIndex, setDraggedIndex] = useState(null);
-  
+
   const [uploadingRecipeImages, setUploadingRecipeImages] = useState({});
   const [uploadingStepImages, setUploadingStepImages] = useState({});
-  const [uploadProgress, setUploadProgress] = useState({});
 
   const {
     register,
@@ -52,6 +52,26 @@ const RecipeEdit = () => {
     'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&h=600&fit=crop',
     'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&h=600&fit=crop',
   ];
+
+  // Validation function for image files
+  const validateImageFile = useCallback((file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!file) {
+      return { isValid: false, error: 'Vui lòng chọn file' };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return { isValid: false, error: 'Chỉ chấp nhận file ảnh (JPEG, PNG, GIF, WebP)' };
+    }
+
+    if (file.size > maxSize) {
+      return { isValid: false, error: 'File quá lớn. Vui lòng chọn file nhỏ hơn 10MB' };
+    }
+
+    return { isValid: true };
+  }, []);
 
   const extractCategoryIds = useCallback((categoryData) => {
     if (!categoryData || !Array.isArray(categoryData)) return [];
@@ -92,17 +112,18 @@ const RecipeEdit = () => {
           }))
       );
     } else {
-      setRecipeSteps([{ 
+      setRecipeSteps([{
         id: null,
-        step: '1', 
-        tutorial: '', 
-        duration: '', 
+        step: '1',
+        tutorial: '',
+        duration: '',
         imageUrls: [''],
         isNew: true
       }]);
     }
   }, [steps]);
 
+  // Handle recipe image upload with new API
   const handleRecipeImageUpload = useCallback(async (index, file) => {
     if (!file) return;
 
@@ -115,28 +136,68 @@ const RecipeEdit = () => {
 
     const uploadKey = `recipe-${index}`;
     setUploadingRecipeImages(prev => ({ ...prev, [uploadKey]: true }));
-    setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
-      const imageUrl = await uploadImageToCloudinary(file, (progress) => {
-        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+      // Create FormData for the new API
+      const formData = new FormData();
+      formData.append('files', file);
+
+      console.log('📤 Uploading recipe image:', file.name, file.type, file.size);
+
+      const response = await uploadImageMutation.mutateAsync(formData);
+
+      console.log('✅ Upload response:', response);
+
+      // Handle different possible response structures
+      // Thành:
+      let imageUrl = null;
+      console.log('Raw response structure:', response);
+
+      // Check if response is an array (your server returns [{url: "..."}])
+      if (Array.isArray(response) && response.length > 0 && response[0].url) {
+        imageUrl = response[0].url;
+      }
+      // Check if response.data is an array  
+      else if (response?.data && Array.isArray(response.data) && response.data.length > 0 && response.data[0].url) {
+        imageUrl = response.data[0].url;
+      }
+      // Original checks for object format
+      else if (response?.data?.imageUrl) {
+        imageUrl = response.data.imageUrl;
+      } else if (response?.data?.url) {
+        imageUrl = response.data.url;
+      } else if (response?.imageUrl) {
+        imageUrl = response.imageUrl;
+      } else if (response?.url) {
+        imageUrl = response.url;
+      } else if (typeof response === 'string') {
+        imageUrl = response;
+      }
+
+      if (!imageUrl) {
+        console.error('No image URL in response:', response);
+        throw new Error('Không nhận được URL ảnh từ server');
+      }
+
+      setImageUrls(prev => {
+        const newUrls = [...prev];
+        newUrls[index] = imageUrl;
+        return newUrls;
       });
 
-      const newUrls = [...imageUrls];
-      newUrls[index] = imageUrl;
-      setImageUrls(newUrls);
+      setSuccessMessage('Upload ảnh thành công!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Upload error:', error);
-      setErrorMessage(`Lỗi upload ảnh: ${error.message}`);
+      const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error';
+      setErrorMessage(`Lỗi upload ảnh: ${errorMsg}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setUploadingRecipeImages(prev => ({ ...prev, [uploadKey]: false }));
-      setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
     }
-  }, [imageUrls]);
+  }, [uploadImageMutation, validateImageFile]);
 
-  // Handle step image upload
+  // Handle step image upload with new API
   const handleStepImageUpload = useCallback(async (stepIndex, imageIndex, file) => {
     if (!file) return;
 
@@ -149,12 +210,48 @@ const RecipeEdit = () => {
 
     const uploadKey = `step-${stepIndex}-${imageIndex}`;
     setUploadingStepImages(prev => ({ ...prev, [uploadKey]: true }));
-    setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
-      const imageUrl = await uploadImageToCloudinary(file, (progress) => {
-        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
-      });
+      // Create FormData for the new API
+      const formData = new FormData();
+      formData.append('files', file);
+
+      console.log('📤 Uploading step image:', file.name, file.type, file.size);
+
+      const response = await uploadImageMutation.mutateAsync(formData);
+
+      console.log('✅ Upload response:', response);
+
+      // Handle different possible response structures
+      // Thành:
+      let imageUrl = null;
+      console.log('Raw response structure:', response);
+
+      // Check if response is an array (your server returns [{url: "..."}])
+      if (Array.isArray(response) && response.length > 0 && response[0].url) {
+        imageUrl = response[0].url;
+      }
+      // Check if response.data is an array  
+      else if (response?.data && Array.isArray(response.data) && response.data.length > 0 && response.data[0].url) {
+        imageUrl = response.data[0].url;
+      }
+      // Original checks for object format
+      else if (response?.data?.imageUrl) {
+        imageUrl = response.data.imageUrl;
+      } else if (response?.data?.url) {
+        imageUrl = response.data.url;
+      } else if (response?.imageUrl) {
+        imageUrl = response.imageUrl;
+      } else if (response?.url) {
+        imageUrl = response.url;
+      } else if (typeof response === 'string') {
+        imageUrl = response;
+      }
+
+      if (!imageUrl) {
+        console.error('No image URL in response:', response);
+        throw new Error('Không nhận được URL ảnh từ server');
+      }
 
       setRecipeSteps(prev => {
         const copy = [...prev];
@@ -163,17 +260,18 @@ const RecipeEdit = () => {
         copy[stepIndex] = { ...copy[stepIndex], imageUrls };
         return copy;
       });
-    
+
+      setSuccessMessage('Upload ảnh thành công!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Upload error:', error);
-      setErrorMessage(`Lỗi upload ảnh: ${error.message}`);
+      const errorMsg = error?.response?.data?.message || error?.message || 'Unknown error';
+      setErrorMessage(`Lỗi upload ảnh: ${errorMsg}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setUploadingStepImages(prev => ({ ...prev, [uploadKey]: false }));
-      setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
     }
-  }, []);
+  }, [uploadImageMutation, validateImageFile]);
 
   const handleDragStart = useCallback((e, index) => {
     setDraggedIndex(index);
@@ -187,7 +285,7 @@ const RecipeEdit = () => {
 
   const handleDrop = useCallback((e, dropIndex) => {
     e.preventDefault();
-    
+
     if (draggedIndex === null || draggedIndex === dropIndex) {
       setDraggedIndex(null);
       return;
@@ -195,10 +293,10 @@ const RecipeEdit = () => {
 
     const newSteps = [...recipeSteps];
     const draggedStep = newSteps[draggedIndex];
-    
+
     newSteps.splice(draggedIndex, 1);
     newSteps.splice(dropIndex, 0, draggedStep);
-    
+
     const reorderedSteps = newSteps.map((step, index) => ({
       ...step,
       step: (index + 1).toString()
@@ -227,11 +325,11 @@ const RecipeEdit = () => {
   const addStep = useCallback(() => {
     setRecipeSteps(prev => [
       ...prev,
-      { 
+      {
         id: null,
-        step: (prev.length + 1).toString(), 
-        tutorial: '', 
-        duration: '', 
+        step: (prev.length + 1).toString(),
+        tutorial: '',
+        duration: '',
         imageUrls: [''],
         isNew: true
       },
@@ -253,7 +351,6 @@ const RecipeEdit = () => {
     });
   }, []);
 
-  // FIX: Update step image URL correctly
   const updateStepImageUrl = useCallback((stepIndex, imageIndex, value) => {
     setRecipeSteps(prev => {
       const copy = [...prev];
@@ -296,7 +393,7 @@ const RecipeEdit = () => {
     try {
       navigate('/recipes');
       console.log('Navigation to /recipes triggered');
-      setSuccessMessage(''); 
+      setSuccessMessage('');
     } catch (err) {
       console.error('Navigation error:', err);
       setErrorMessage('Lỗi khi chuyển hướng: ' + (err.message || 'Unknown error'));
@@ -308,7 +405,7 @@ const RecipeEdit = () => {
       console.log('=== SUBMIT START ===');
       console.log('Form data:', data);
       console.log('Current recipeSteps:', recipeSteps);
-      
+
       setSuccessMessage('');
       setErrorMessage('');
 
@@ -331,15 +428,15 @@ const RecipeEdit = () => {
         {
           onSuccess: () => {
             console.log('=== RECIPE UPDATE SUCCESS ===');
-            
+
             const validSteps = recipeSteps.filter(step => {
               const isValid = step.tutorial && step.tutorial.trim() !== '';
               console.log(`Step validation - ID: ${step.id}, isNew: ${step.isNew}, valid: ${isValid}`);
               return isValid;
             });
-            
+
             console.log(`Total valid steps: ${validSteps.length}`);
-            
+
             if (validSteps.length === 0) {
               setSuccessMessage('Cập nhật công thức thành công!');
               handleNavigation();
@@ -348,7 +445,7 @@ const RecipeEdit = () => {
 
             console.log('=== PROCESSING STEPS ===');
             let stepsProcessed = 0;
-            
+
             validSteps.forEach((step, index) => {
               const stepData = {
                 step: parseInt(step.step, 10) || index + 1,
@@ -357,9 +454,9 @@ const RecipeEdit = () => {
                 imageUrls: step.imageUrls.filter(url => url.trim() !== ''),
                 recipeId: id,
               };
-              
+
               console.log(`Processing step ${index + 1}:`, stepData);
-              
+
               if (step.id && !step.isNew) {
                 console.log(`🔄 UPDATING existing step ${index + 1} with ID: ${step.id}`);
                 updateStep.mutate(
@@ -367,7 +464,7 @@ const RecipeEdit = () => {
                   {
                     onSuccess: () => {
                       stepsProcessed++;
-                
+
                       if (stepsProcessed === validSteps.length) {
                         console.log('🎉 All steps processed successfully');
                         setSuccessMessage('Cập nhật công thức và các bước thành công!');
@@ -375,13 +472,13 @@ const RecipeEdit = () => {
                       }
                     },
                     onError: (error) => {
-                 
+
                       setErrorMessage('Lỗi khi cập nhật bước: ' + (error.message || 'Unknown error'));
                     },
                   }
                 );
               } else {
-        
+
                 const addStepData = {
                   step: parseInt(step.step, 10) || index + 1,
                   tutorial: step.tutorial || '',
@@ -389,22 +486,22 @@ const RecipeEdit = () => {
                   duration: parseInt(step.duration, 10) || 0,
                   imageUrls: step.imageUrls.filter(url => url.trim() !== ''),
                 };
-                
+
                 console.log('Creating step with data:', addStepData);
-                
+
                 addStepMutation.mutate(addStepData, {
                   onSuccess: () => {
                     stepsProcessed++;
-      
-                    
+
+
                     if (stepsProcessed === validSteps.length) {
-                    
+
                       setSuccessMessage('Cập nhật công thức và tạo bước mới thành công!');
                       handleNavigation();
                     }
                   },
                   onError: (error) => {
-                
+
                     setErrorMessage('Lỗi khi tạo bước mới: ' + (error.message || 'Unknown error'));
                   },
                 });
@@ -412,7 +509,7 @@ const RecipeEdit = () => {
             });
           },
           onError: (error) => {
-       
+
             setErrorMessage('Lỗi khi cập nhật công thức: ' + (error.message || 'Unknown error'));
           },
         }
@@ -552,8 +649,7 @@ const RecipeEdit = () => {
               {imageUrls.map((url, index) => {
                 const uploadKey = `recipe-${index}`;
                 const isUploading = uploadingRecipeImages[uploadKey];
-                const progress = uploadProgress[uploadKey] || 0;
-                
+
                 return (
                   <div key={index} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
                     <div className="flex items-center justify-between mb-3">
@@ -570,7 +666,7 @@ const RecipeEdit = () => {
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <input
@@ -601,16 +697,13 @@ const RecipeEdit = () => {
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                         />
                       </div>
-                      
+
                       {isUploading && (
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                          ></div>
+                          <div className="bg-amber-500 h-2 rounded-full animate-pulse"></div>
                         </div>
                       )}
-                      
+
                       {url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url) && (
                         <div className="relative">
                           <img
@@ -627,7 +720,7 @@ const RecipeEdit = () => {
                   </div>
                 );
               })}
-              
+
               <button
                 type="button"
                 onClick={() => setImageUrls(prev => [...prev, ''])}
@@ -728,9 +821,8 @@ const RecipeEdit = () => {
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, index)}
-                  className={`flex flex-col sm:flex-row items-start gap-6 bg-white/70 rounded-2xl p-4 shadow hover:bg-white transition-all duration-300 cursor-move ${
-                    draggedIndex === index ? 'opacity-50 transform scale-95' : ''
-                  }`}
+                  className={`flex flex-col sm:flex-row items-start gap-6 bg-white/70 rounded-2xl p-4 shadow hover:bg-white transition-all duration-300 cursor-move ${draggedIndex === index ? 'opacity-50 transform scale-95' : ''
+                    }`}
                 >
 
                   <div className="flex items-center space-x-3 flex-shrink-0">
@@ -746,7 +838,7 @@ const RecipeEdit = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   <div className="flex-1 space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -781,8 +873,7 @@ const RecipeEdit = () => {
                       {step.imageUrls.map((url, imageIndex) => {
                         const uploadKey = `step-${index}-${imageIndex}`;
                         const isUploading = uploadingStepImages[uploadKey];
-                        const progress = uploadProgress[uploadKey] || 0;
-                        
+
                         return (
                           <div key={imageIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
                             <div className="flex items-center justify-between mb-2">
@@ -797,7 +888,7 @@ const RecipeEdit = () => {
                                 </button>
                               )}
                             </div>
-                            
+
                             <div className="space-y-2">
                               <div className="flex items-center space-x-2">
                                 <input
@@ -828,16 +919,13 @@ const RecipeEdit = () => {
                                   placeholder="Hoặc dán link"
                                 />
                               </div>
-                              
+
                               {isUploading && (
                                 <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                  <div 
-                                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${progress}%` }}
-                                  ></div>
+                                  <div className="bg-blue-500 h-1.5 rounded-full animate-pulse"></div>
                                 </div>
                               )}
-                              
+
                               {url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url) && (
                                 <img
                                   src={url}
@@ -852,7 +940,7 @@ const RecipeEdit = () => {
                           </div>
                         );
                       })}
-                      
+
                       <button
                         type="button"
                         onClick={() => addStepImage(index)}
@@ -862,7 +950,7 @@ const RecipeEdit = () => {
                         <span>Thêm ảnh</span>
                       </button>
                     </div>
-                    
+
                     {recipeSteps.length > 1 && (
                       <button
                         type="button"

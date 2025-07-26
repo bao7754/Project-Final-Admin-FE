@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { categoriesApi } from '../api';
 
-// Lấy danh sách categories (hỗ trợ page, limit nếu backend có)
 export const useCategories = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: ['categories', page, limit],

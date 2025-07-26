@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FiBook, 
-  FiCheckCircle, 
-  FiCalendar, 
+import {
+  FiBook,
+  FiCheckCircle,
+  FiCalendar,
   FiTrendingUp,
   FiHeart,
   FiRefreshCw,
@@ -11,16 +11,18 @@ import {
   FiEdit3,
   FiStar,
   FiUsers,
-  FiActivity
+  FiActivity,
+  FiDollarSign,
+  FiAward
 } from 'react-icons/fi';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -32,11 +34,22 @@ import {
 } from 'recharts';
 import { useRecipes } from '../hooks/useRecipes';
 import { useFavorites } from '../hooks/userFavorites';
+// import { usepremiumUsers } from '../hooks/usePremiumUsers'; // Import your premium users hook
 import Loading from '../components/Loading';
 
 const Dashboard = () => {
   const { data, isLoading, refetch } = useRecipes(1, 9999);
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
+  // const { data: premiumData, isLoading: premiumLoading } = usepremiumUsers();
+
+  // Temporary mock data - replace with real API call later
+  const premiumData = {
+    totalUsers: 24,
+    totalRecipes: 17,
+    totalPremiumUsers: 8,
+    totalCookedRecipes: 95
+  };
+  const premiumLoading = false;
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -73,15 +86,31 @@ const Dashboard = () => {
     }
   };
 
+  // Format currency to VND
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
   // Computed statistics
   const stats = useMemo(() => {
     if (!data?.data) return {};
 
     const recipes = data.data;
     const totalRecipes = data.pagination.total || 0;
-    const approvedRecipes = data.pagination?.approvedCount || 
+    const approvedRecipes = data.pagination?.approvedCount ||
       recipes.filter(recipe => Boolean(recipe.approvedAt)).length || 0;
     const pendingRecipes = totalRecipes - approvedRecipes;
+
+    // Premium user statistics
+    const totalPremiumUsers = premiumData?.totalPremiumUsers || 0;
+    const totalUsers = premiumData?.totalUsers || 0;
+    const totalCookedRecipes = premiumData?.totalCookedRecipes || 0;
+    const premiumPrice = 20000; // 20,000 VND per premium user
+    const totalRevenue = totalPremiumUsers * premiumPrice;
+    const premiumRate = totalUsers > 0 ? Math.round((totalPremiumUsers / totalUsers) * 100) : 0;
 
     // Calculate trend data (last 7 days)
     const last7Days = [];
@@ -109,7 +138,7 @@ const Dashboard = () => {
     });
 
     const categoryData = Object.entries(categoryStats)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
 
@@ -144,11 +173,17 @@ const Dashboard = () => {
       approvalRate: totalRecipes > 0 ? Math.round((approvedRecipes / totalRecipes) * 100) : 0,
       trendData: last7Days,
       categoryData,
-      topFavoriteRecipes
+      topFavoriteRecipes,
+      // Premium user stats
+      totalUsers,
+      totalPremiumUsers,
+      totalCookedRecipes,
+      totalRevenue,
+      premiumRate
     };
-  }, [data, favoritesData]);
+  }, [data, favoritesData, premiumData]);
 
-  if (isLoading || favoritesLoading) return <Loading />;
+  if (isLoading || favoritesLoading || premiumLoading) return <Loading />;
 
   const latestRecipes = [...(data?.data || [])].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -185,7 +220,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Simplified Stats Cards */}
+        {/* Updated Stats Cards with Premium Users */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
             <div className="flex items-center">
@@ -237,7 +272,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Simplified Charts Section */}
+        {/* New User Analytics Section */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
           {/* Recipe Trend Chart */}
           <div className="bg-white rounded-lg shadow p-6">
@@ -252,18 +287,18 @@ const Dashboard = () => {
               <AreaChart data={stats.trendData}>
                 <defs>
                   <linearGradient id="colorRecipes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorApproved" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="date" stroke="#6B7280" fontSize={12} />
                 <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: 'white',
                     border: '1px solid #E5E7EB',
@@ -318,7 +353,7 @@ const Dashboard = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: 'white',
                     border: '1px solid #E5E7EB',
@@ -331,6 +366,29 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Revenue Summary Card */}
+        <div className="bg-gradient-to-r from-emerald-500 to-blue-600 rounded-lg shadow-lg p-6 mb-8 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Tổng quan doanh thu Premium</h3>
+              <p className="text-emerald-100 mb-4">
+                Doanh thu {stats.totalPremiumUsers} người dùng Premium
+              </p>
+              <div className="text-3xl font-bold mb-2">
+                {formatCurrency(stats.totalRevenue)}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="p-4  bg-opacity-20 rounded-lg">
+                <FiDollarSign className="h-12 w-12 mx-auto mb-2" />
+                <p className="text-sm">Giá Premium</p>
+                <p className="font-bold">20.000đ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rest of the existing code remains the same... */}
         {/* Simplified Popular Recipes */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -345,7 +403,7 @@ const Dashboard = () => {
               <p className="text-xl font-bold text-red-500">{favoritesData?.length || 0}</p>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             {stats.topFavoriteRecipes.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
@@ -359,21 +417,20 @@ const Dashboard = () => {
               stats.topFavoriteRecipes.slice(0, 10).map((recipe, index) => (
                 <div key={recipe._id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                      index === 0 ? 'bg-yellow-500' :
-                      index === 1 ? 'bg-gray-400' :
-                      index === 2 ? 'bg-orange-500' :
-                      'bg-blue-500'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${index === 0 ? 'bg-yellow-500' :
+                        index === 1 ? 'bg-gray-400' :
+                          index === 2 ? 'bg-orange-500' :
+                            'bg-blue-500'
+                      }`}>
                       {index + 1}
                     </div>
-                    
+
                     <img
                       className="h-12 w-12 rounded-lg object-cover"
                       src={recipe.imageUrls?.[0] || 'https://via.placeholder.com/48x48'}
                       alt={recipe.name}
                     />
-                    
+
                     <div>
                       <h4 className="font-medium text-gray-900">{recipe.name}</h4>
                       <p className="text-sm text-gray-500 flex items-center">
@@ -382,7 +439,7 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
                     <FiHeart className="h-4 w-4 text-red-500" />
                     <span className="font-semibold text-red-600">{recipe.favoriteCount}</span>
@@ -403,7 +460,7 @@ const Dashboard = () => {
               10 Công thức mới nhất
             </h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -470,23 +527,23 @@ const Dashboard = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isApproved
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
                             }`}>
                             {isApproved ? 'Đã duyệt' : 'Chờ duyệt'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <Link 
-                              to={`/recipes/${recipe._id}`} 
+                            <Link
+                              to={`/recipes/${recipe._id}`}
                               className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
                             >
                               <FiEye className="h-3 w-3 mr-1" />
                               Xem
                             </Link>
-                            <Link 
-                              to={`/recipes/edit/${recipe._id}`} 
+                            <Link
+                              to={`/recipes/edit/${recipe._id}`}
                               className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
                             >
                               <FiEdit3 className="h-3 w-3 mr-1" />

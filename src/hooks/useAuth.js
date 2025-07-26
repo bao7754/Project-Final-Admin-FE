@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { authApi } from '../api';
+import { authApi, premiumUsers } from '../api';
 import useAuthStore from '../store/authStore';
 
 export const useAuth = () => {
@@ -77,3 +77,11 @@ export const useUserDetail = (id) => {
     },
   });
 };
+
+export const usepremiumUsers = () => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useQuery({
+    queryKey: ['premium'],
+    queryFn: () => premiumUsers.premiumUsers()
+  })
+}
