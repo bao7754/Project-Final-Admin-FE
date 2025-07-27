@@ -14,9 +14,9 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
   const [ingredients, setIngredients] = useState(['']);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [images, setImages] = useState([]); // Stores image files and their upload status
+  const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
-  const [uploadedImageUrls, setUploadedImageUrls] = useState([]); // Final uploaded URLs
+  const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
   const [formError, setFormError] = useState('');
 
   const {
@@ -37,13 +37,13 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
     const validFiles = [];
     const errors = [];
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    
+
     files.forEach((file, index) => {
       if (!allowedTypes.includes(file.type.toLowerCase())) {
         errors.push(`File ${index + 1}: Chỉ hỗ trợ JPG, PNG, WebP, GIF`);
         return;
       }
-      
+
       if (file.size > 5 * 1024 * 1024) {
         errors.push(`File ${index + 1}: Kích thước vượt quá 5MB`);
         return;
@@ -53,10 +53,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
         errors.push(`File ${index + 1}: Tên file không hợp lệ`);
         return;
       }
-      
+
       validFiles.push(file);
     });
-    
+
     return { validFiles, errors };
   };
 
@@ -69,10 +69,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
   };
 
   const addIngredient = () => setIngredients([...ingredients, '']);
-  
+
   const removeIngredient = (index) =>
     setIngredients(ingredients.filter((_, i) => i !== index));
-  
+
   const updateIngredient = (index, value) => {
     const arr = [...ingredients];
     arr[index] = value;
@@ -84,7 +84,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
     formData.append('files', file);
 
     // Update image status to uploading
-    setImages(prev => prev.map((img, idx) => 
+    setImages(prev => prev.map((img, idx) =>
       idx === imageIndex ? { ...img, status: 'uploading' } : img
     ));
 
@@ -97,7 +97,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
       });
 
       let imageUrl;
-      
+
       if (Array.isArray(response)) {
         if (response.length > 0 && response[0]?.url) {
           imageUrl = response[0].url;
@@ -124,7 +124,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
       }
 
       // Update image status to success and store URL
-      setImages(prev => prev.map((img, idx) => 
+      setImages(prev => prev.map((img, idx) =>
         idx === imageIndex ? { ...img, status: 'success', url: imageUrl } : img
       ));
 
@@ -138,12 +138,12 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
       return imageUrl;
     } catch (error) {
       console.error('Upload error:', error);
-      
+
       // Update image status to error
-      setImages(prev => prev.map((img, idx) => 
-        idx === imageIndex ? { 
-          ...img, 
-          status: 'error', 
+      setImages(prev => prev.map((img, idx) =>
+        idx === imageIndex ? {
+          ...img,
+          status: 'error',
           error: error?.response?.data?.message || error.message || 'Lỗi upload'
         } : img
       ));
@@ -159,11 +159,11 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
-    
+
     if (files.length === 0) return;
 
     const { validFiles, errors: validationErrors } = validateImages(files);
-    
+
     if (validationErrors.length > 0) {
       setFormError('Lỗi validate ảnh:\n' + validationErrors.join('\n'));
       return;
@@ -171,7 +171,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
     const totalImages = images.length + validFiles.length;
     const filesToAdd = totalImages > 5 ? validFiles.slice(0, 5 - images.length) : validFiles;
-    
+
     if (totalImages > 5) {
       setFormError(`Chỉ được chọn tối đa 5 ảnh. Chỉ ${filesToAdd.length} ảnh đầu tiên được thêm.`);
     }
@@ -184,10 +184,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
       url: null,
       error: null
     }));
-    
+
     setImages(prev => [...prev, ...newImages]);
     setImagePreviews(prev => [...prev, ...newPreviews]);
-    
+
     if (validationErrors.length === 0) {
       setFormError('');
     }
@@ -210,7 +210,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
   const removeImage = (index) => {
     // Revoke preview URL
     revokeImagePreview(imagePreviews[index]);
-    
+
     // Remove from all arrays
     setImages(images.filter((_, i) => i !== index));
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
@@ -238,47 +238,47 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
   const validateRecipeData = (recipeData) => {
     const errors = [];
-    
+
     if (!recipeData.name || recipeData.name.trim() === '') {
       errors.push('Tên công thức không được để trống');
     }
-    
+
     if (!recipeData.description || recipeData.description.trim() === '') {
       errors.push('Mô tả không được để trống');
     }
-    
+
     if (!recipeData.cookingTime || recipeData.cookingTime.trim() === '') {
       errors.push('Thời gian nấu không được để trống');
     }
-    
+
     if (!recipeData.servings || recipeData.servings.trim() === '') {
       errors.push('Khẩu phần không được để trống');
     }
-    
+
     if (!recipeData.ingredients || !Array.isArray(recipeData.ingredients) || recipeData.ingredients.length === 0) {
       errors.push('Cần có ít nhất 1 nguyên liệu');
     }
-    
+
     if (recipeData.categoryIds && !Array.isArray(recipeData.categoryIds)) {
       errors.push('categoryIds phải là array');
     }
-    
+
     if (recipeData.imageUrls && !Array.isArray(recipeData.imageUrls)) {
       errors.push('imageUrls phải là array');
     }
-    
+
     return errors;
   };
 
   const onSubmit = async (data) => {
     setFormError('');
-    
+
     // Check authentication
     if (!token) {
       setFormError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
       return;
     }
-    
+
     const filteredIngredients = ingredients.filter((i) => i.trim() !== '');
     if (filteredIngredients.length === 0) {
       setFormError('Cần nhập ít nhất 1 nguyên liệu!');
@@ -312,35 +312,35 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
       createMutation.mutate(recipeData, {
         onSuccess: (response) => {
-          const newId = response?._id || 
-                       response?.id || 
-                       response?.data?._id || 
-                       response?.data?.id ||
-                       response?.recipe?._id ||
-                       response?.recipe?.id;
-          
+          const newId = response?._id ||
+            response?.id ||
+            response?.data?._id ||
+            response?.data?.id ||
+            response?.recipe?._id ||
+            response?.recipe?.id;
+
           // Cleanup
           imagePreviews.forEach(url => revokeImagePreview(url));
-          
+
           reset();
           setIngredients(['']);
           setImages([]);
           setImagePreviews([]);
           setUploadedImageUrls([]);
           setSelectedCategories([]);
-          
+
           if (onSuccess) {
             onSuccess(newId);
           }
         },
         onError: (error) => {
           let errorMessage = 'Có lỗi xảy ra khi lưu công thức!';
-          
+
           if (error?.response?.status === 401) {
             setFormError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
             return;
           }
-          
+
           if (error.response?.data?.message) {
             errorMessage = error.response.data.message;
           } else if (error.response?.data?.error) {
@@ -348,7 +348,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
           } else if (error.message) {
             errorMessage = error.message;
           }
-          
+
           if (error.response?.data?.errors) {
             const serverErrors = error.response.data.errors;
             if (Array.isArray(serverErrors)) {
@@ -357,7 +357,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
               errorMessage += '\nChi tiết: ' + JSON.stringify(serverErrors);
             }
           }
-          
+
           setFormError(`Lỗi server (${error.response?.status}): ${errorMessage}`);
         },
       });
@@ -400,8 +400,8 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                   <p className="text-orange-100 mt-1">Chia sẻ công thức nấu ăn tuyệt vời của bạn</p>
                 </div>
               </div>
-              <button 
-                onClick={onCancel} 
+              <button
+                onClick={onCancel}
                 className="bg-white/20 hover:bg-white/30 p-3 rounded-xl transition-all duration-200 backdrop-blur-sm"
               >
                 <FiX className="h-6 w-6 text-white" />
@@ -450,7 +450,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                   </div>
                   Thông tin cơ bản
                 </h3>
-                
+
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -459,9 +459,8 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                     <input
                       type="text"
                       {...register('name', { required: 'Tên công thức là bắt buộc' })}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                        errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-orange-300'
-                      }`}
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-orange-300'
+                        }`}
                       placeholder="VD: Phở bò Hà Nội truyền thống"
                       disabled={createMutation.isPending}
                     />
@@ -478,9 +477,8 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                     <textarea
                       rows={4}
                       {...register('description', { required: 'Mô tả là bắt buộc' })}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${
-                        errors.description ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-orange-300'
-                      }`}
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-orange-300'
+                        }`}
                       placeholder="Mô tả ngắn gọn về món ăn, hương vị, nguồn gốc..."
                       disabled={createMutation.isPending}
                     />
@@ -499,7 +497,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                   </div>
                   Thời gian & Khẩu phần
                 </h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -507,38 +505,52 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                       Thời gian nấu *
                     </label>
                     <input
-                      type="text"
-                      {...register('cookingTime', { required: 'Thời gian nấu là bắt buộc' })}
-                      placeholder="VD: 30 phút"
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${
-                        errors.cookingTime ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-green-300'
-                      }`}
+                      type="number"
+                      {...register('cookingTime', {
+                        required: 'Thời gian nấu là bắt buộc',
+                        min: {
+                          value: 1,
+                          message: 'Thời gian nấu phải lớn hơn 0'
+                        }
+                      })}
+                      placeholder="VD: 30"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${errors.cookingTime ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-green-300'
+                        }`}
                       disabled={createMutation.isPending}
                     />
-                    {errors.cookingTime && <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <FiX className="h-4 w-4 mr-1" />
-                      {errors.cookingTime.message}
-                    </p>}
+                    {errors.cookingTime && (
+                      <p className="mt-2 text-sm text-red-600 flex items-center">
+                        <FiX className="h-4 w-4 mr-1" />
+                        {errors.cookingTime.message}
+                      </p>
+                    )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
                       <FiUsers className="h-4 w-4 mr-2 text-gray-500" />
                       Khẩu phần *
                     </label>
                     <input
-                      type="text"
-                      {...register('servings', { required: 'Khẩu phần là bắt buộc' })}
-                      placeholder="VD: 4 người"
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${
-                        errors.servings ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-green-300'
-                      }`}
+                      type="number"
+                      {...register('servings', {
+                        required: 'Khẩu phần là bắt buộc',
+                        min: {
+                          value: 1,
+                          message: 'Khẩu phần phải lớn hơn 0'
+                        }
+                      })}
+                      placeholder="VD: 4"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 ${errors.servings ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-green-300'
+                        }`}
                       disabled={createMutation.isPending}
                     />
-                    {errors.servings && <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <FiX className="h-4 w-4 mr-1" />
-                      {errors.servings.message}
-                    </p>}
+                    {errors.servings && (
+                      <p className="mt-2 text-sm text-red-600 flex items-center">
+                        <FiX className="h-4 w-4 mr-1" />
+                        {errors.servings.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -550,7 +562,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                   </div>
                   Nguyên liệu
                 </h3>
-                
+
                 <div className="space-y-4">
                   {ingredients.map((ingredient, index) => (
                     <div key={index} className="flex items-center space-x-3 group">
@@ -577,7 +589,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                       )}
                     </div>
                   ))}
-                  
+
                   <button
                     type="button"
                     onClick={addIngredient}
@@ -599,7 +611,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                   </div>
                   Danh mục
                 </h3>
-                
+
                 <div className="space-y-3">
                   {categories.map((category) => (
                     <label key={category.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-yellow-50 transition-all duration-200 cursor-pointer group">
@@ -630,7 +642,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                     </span>
                   )}
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="border-2 border-dashed border-pink-300 rounded-xl p-6 text-center hover:border-pink-400 hover:bg-pink-50 transition-all duration-200">
                     <input
@@ -642,11 +654,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                       className="hidden"
                       id="imageUpload"
                     />
-                    <label 
-                      htmlFor="imageUpload" 
-                      className={`cursor-pointer flex flex-col items-center space-y-3 ${
-                        createMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                    <label
+                      htmlFor="imageUpload"
+                      className={`cursor-pointer flex flex-col items-center space-y-3 ${createMutation.isPending ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                     >
                       <div className="bg-pink-100 p-4 rounded-full">
                         <FiImage className="h-8 w-8 text-pink-600" />
@@ -654,14 +665,14 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                       <div>
                         <p className="text-pink-600 font-semibold">Chọn ảnh</p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Tối đa 5 ảnh, mỗi ảnh ≤ 5MB<br/>
-                          Định dạng: JPG, PNG, WebP, GIF<br/>
+                          Tối đa 5 ảnh, mỗi ảnh ≤ 5MB<br />
+                          Định dạng: JPG, PNG, WebP, GIF<br />
                           <span className="text-green-600 font-medium">Ảnh sẽ được upload ngay khi chọn</span>
                         </p>
                       </div>
                     </label>
                   </div>
-                  
+
                   {images.length > 0 && (
                     <div className="grid grid-cols-2 gap-3">
                       {images.map((image, index) => (
@@ -669,14 +680,13 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
                           <img
                             src={image.preview}
                             alt={`Preview ${index + 1}`}
-                            className={`w-full h-24 object-cover rounded-xl border-2 transition-all duration-200 ${
-                              image.status === 'success' ? 'border-green-300' :
-                              image.status === 'error' ? 'border-red-300' :
-                              image.status === 'uploading' ? 'border-blue-300' :
-                              'border-gray-200'
-                            }`}
+                            className={`w-full h-24 object-cover rounded-xl border-2 transition-all duration-200 ${image.status === 'success' ? 'border-green-300' :
+                                image.status === 'error' ? 'border-red-300' :
+                                  image.status === 'uploading' ? 'border-blue-300' :
+                                    'border-gray-200'
+                              }`}
                           />
-                          
+
                           {/* Status indicator */}
                           <div className="absolute top-2 left-2">
                             {image.status === 'uploading' && (
@@ -713,7 +723,7 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
 
                           {/* File name */}
                           <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg backdrop-blur-sm">
-                            {image.file?.name?.length > 10 
+                            {image.file?.name?.length > 10
                               ? image.file.name.substring(0, 10) + '...'
                               : image.file?.name
                             }
@@ -751,10 +761,10 @@ const RecipeForm = ({ onCancel, onSuccess }) => {
               >
                 <FiSave className="h-5 w-5" />
                 <span>
-                  {uploadingCount > 0 
-                    ? `Đang upload ${uploadingCount} ảnh...` 
-                    : createMutation.isPending 
-                      ? 'Đang tạo công thức...' 
+                  {uploadingCount > 0
+                    ? `Đang upload ${uploadingCount} ảnh...`
+                    : createMutation.isPending
+                      ? 'Đang tạo công thức...'
                       : 'Tạo công thức'
                   }
                 </span>

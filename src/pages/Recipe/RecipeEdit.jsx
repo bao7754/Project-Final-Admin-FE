@@ -617,7 +617,13 @@ const RecipeEdit = () => {
                     Thời gian nấu <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register('cookingTime', { required: 'Thời gian nấu là bắt buộc' })}
+                    type="number"
+                    min="1"
+                    {...register('cookingTime', {
+                      required: 'Thời gian nấu là bắt buộc',
+                      min: { value: 1, message: 'Thời gian nấu phải lớn hơn hoặc bằng 1 phút' },
+                      valueAsNumber: true
+                    })}
                     className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 ${errors.cookingTime ? 'border-red-300' : 'border-gray-200'}`}
                     placeholder="Ví dụ: 30 phút"
                   />
@@ -628,7 +634,13 @@ const RecipeEdit = () => {
                     Khẩu phần <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register('servings', { required: 'Khẩu phần là bắt buộc' })}
+                    type="number"
+                    min="1"
+                    {...register('servings', {
+                      required: 'Khẩu phần là bắt buộc',
+                      min: { value: 1, message: 'Khẩu phần phải lớn hơn hoặc bằng 1' },
+                      valueAsNumber: true
+                    })}
                     className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 ${errors.servings ? 'border-red-300' : 'border-gray-200'}`}
                     placeholder="Ví dụ: 4 người"
                   />
