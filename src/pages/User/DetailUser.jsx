@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FiArrowLeft, FiMail, FiPhone, FiHome, FiUser, FiCalendar, FiStar, FiShield } from 'react-icons/fi';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUserDetail } from '../../hooks/useAuth';
@@ -9,6 +9,7 @@ const UserDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: user, isLoading, error } = useUserDetail(id);
+  const [imageError, setImageError] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -17,6 +18,69 @@ const UserDetail = () => {
     return `${date.toLocaleTimeString('vi-VN', { hour12: false })} ${date.getDate()}/${
       date.getMonth() + 1
     }/${date.getFullYear()}`;
+  };
+
+  // Hàm tạo avatar từ tên
+  const getInitials = (fullName) => {
+    if (!fullName) return '?';
+    const names = fullName.trim().split(' ');
+    if (names.length === 1) {
+      return names[0].charAt(0).toUpperCase();
+    }
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  };
+
+  // Hàm tạo màu ngẫu nhiên dựa trên tên
+  const getAvatarGradient = (fullName) => {
+    if (!fullName) return 'from-gray-400 to-gray-600';
+    const gradients = [
+      'from-red-400 to-red-600',
+      'from-blue-400 to-blue-600', 
+      'from-green-400 to-green-600',
+      'from-yellow-400 to-yellow-600',
+      'from-purple-400 to-purple-600',
+      'from-pink-400 to-pink-600',
+      'from-indigo-400 to-indigo-600',
+      'from-teal-400 to-teal-600',
+      'from-orange-400 to-orange-600',
+      'from-emerald-400 to-emerald-600'
+    ];
+    const index = fullName.length % gradients.length;
+    return gradients[index];
+  };
+
+  // Component Avatar với fallback
+  const Avatar = ({ user }) => {
+    const shouldShowImage = user?.avatar && !imageError;
+
+    if (shouldShowImage) {
+      return (
+        <motion.img
+          src={user.avatar}
+          alt={user.fullName || 'Avatar người dùng'}
+          className="w-40 h-40 rounded-full border-4 border-white object-cover shadow-2xl"
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.3 }}
+          onError={() => setImageError(true)}
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+        />
+      );
+    }
+
+    // Fallback: Avatar với chữ cái đầu
+    return (
+      <motion.div
+        className={`w-40 h-40 rounded-full bg-gradient-to-br ${getAvatarGradient(user?.fullName)} flex items-center justify-center shadow-2xl border-4 border-white`}
+        whileHover={{ scale: 1.05 }}
+        transition={{ duration: 0.3 }}
+        title={user?.fullName || 'User Avatar'}
+      >
+        <span className="text-6xl font-bold text-white">
+          {getInitials(user?.fullName)}
+        </span>
+      </motion.div>
+    );
   };
 
   if (isLoading) {
@@ -112,20 +176,7 @@ const UserDetail = () => {
             variants={itemVariants}
           >
             <div className="relative">
-              {user.avatar ? (
-                <motion.img
-                  src={user.avatar}
-                  alt={user.fullName || 'Avatar người dùng'}
-                  className="w-40 h-40 rounded-full border-4 border-white object-cover shadow-2xl"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.3 }}
-                  onError={(e) => (e.target.src = 'https://via.placeholder.com/160')}
-                />
-              ) : (
-                <div className="w-40 h-40 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-6xl text-indigo-500 shadow-2xl border-4 border-white">
-                  <FiUser />
-                </div>
-              )}
+              <Avatar user={user} />
               {user.premium && (
                 <div className="absolute -top-2 -right-2 w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
                   <FiStar className="text-white" size={20} />

@@ -870,9 +870,13 @@ const RecipeEdit = () => {
                       </label>
                       <input
                         type="number"
-                        value={step.duration}
-                        onChange={(e) => updateStepField(index, 'duration', e.target.value)}
-                        className="w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 border-gray-200"
+                        min="1"
+                        {...register('duration', {
+                          required: 'Thời lượng là bắt buộc',
+                          min: { value: 1, message: 'Thời lượng phải lớn hơn hoặc bằng 1 phút' },
+                          valueAsNumber: true
+                        })}
+                        className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 ${errors.duration ? 'border-red-300' : 'border-gray-200'}`}
                         placeholder="Ví dụ: 5"
                       />
                     </div>

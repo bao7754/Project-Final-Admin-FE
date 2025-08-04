@@ -7,6 +7,28 @@ import Loading from '../../components/Loading';
 import useAuthStore from '../../store/authStore';
 import { useApproveRecipe } from '../../hooks/useRecipes';
 
+// Hàm chuyển đổi chuỗi có dấu thành không dấu
+const removeVietnameseAccents = (str) => {
+  if (!str) return '';
+  
+  return str
+    .toLowerCase()
+    .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g, 'a')
+    .replace(/[èéẹẻẽêềếệểễ]/g, 'e')
+    .replace(/[ìíịỉĩ]/g, 'i')
+    .replace(/[òóọỏõôồốộổỗơờớợởỡ]/g, 'o')
+    .replace(/[ùúụủũưừứựửữ]/g, 'u')
+    .replace(/[ỳýỵỷỹ]/g, 'y')
+    .replace(/[đ]/g, 'd')
+    .replace(/[ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴ]/g, 'A')
+    .replace(/[ÈÉẸẺẼÊỀẾỆỂỄ]/g, 'E')
+    .replace(/[ÌÍỊỈĨ]/g, 'I')
+    .replace(/[ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ]/g, 'O')
+    .replace(/[ÙÚỤỦŨƯỪỨỰỬỮ]/g, 'U')
+    .replace(/[ỲÝỴỶỸ]/g, 'Y')
+    .replace(/[Đ]/g, 'D');
+};
+
 const Recipes = () => {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,19 +64,23 @@ const Recipes = () => {
     }
   }, [data?.data]);
 
-  // Memoized filtered and sorted recipes
-  // Cập nhật phần filteredAndSortedRecipes với logic filter được sửa
-
+  // Memoized filtered and sorted recipes với search function được cải thiện
   const filteredAndSortedRecipes = useMemo(() => {
     if (!recipes || recipes.length === 0) {
       return [];
     }
 
     let filtered = recipes.filter(recipe => {
-      // Search filter
-      const matchesSearch = !searchTerm ||
-        recipe.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Search filter - Cải thiện để tìm kiếm cả có dấu và không dấu
+      let matchesSearch = true;
+      if (searchTerm) {
+        const searchTermNormalized = removeVietnameseAccents(searchTerm.toLowerCase());
+        const recipeName = removeVietnameseAccents(recipe.name?.toLowerCase() || '');
+        const recipeDescription = removeVietnameseAccents(recipe.description?.toLowerCase() || '');
+        
+        matchesSearch = recipeName.includes(searchTermNormalized) || 
+                      recipeDescription.includes(searchTermNormalized);
+      }
 
       // Category filter - Sửa lại logic này
       let matchesCategory = true;
@@ -199,7 +225,7 @@ const Recipes = () => {
         </div>
         <input
           type="text"
-          placeholder="Tìm kiếm công thức..."
+          placeholder="Tìm kiếm công thức... "
           className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

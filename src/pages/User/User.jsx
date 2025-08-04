@@ -7,6 +7,7 @@ const UserList = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [imageErrors, setImageErrors] = useState(new Set());
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -30,6 +31,61 @@ const UserList = () => {
         if (isNaN(date)) return '—';
         return `${date.toLocaleTimeString('vi-VN')} ${date.getDate()}/${date.getMonth() + 1
             }/${date.getFullYear()}`;
+    };
+
+    // Hàm xử lý khi avatar bị lỗi
+    const handleImageError = (userId) => {
+        setImageErrors(prev => new Set([...prev, userId]));
+    };
+
+    // Hàm tạo avatar từ tên
+    const getInitials = (fullName) => {
+        if (!fullName) return '?';
+        const names = fullName.trim().split(' ');
+        if (names.length === 1) {
+            return names[0].charAt(0).toUpperCase();
+        }
+        return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+    };
+
+    // Hàm tạo màu ngẫu nhiên dựa trên tên
+    const getAvatarColor = (fullName) => {
+        if (!fullName) return 'bg-gray-500';
+        const colors = [
+            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+            'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+        ];
+        const index = fullName.length % colors.length;
+        return colors[index];
+    };
+
+    // Component Avatar với fallback
+    const Avatar = ({ user }) => {
+        const hasError = imageErrors.has(user.id);
+        const shouldShowImage = user.avatar && !hasError;
+
+        if (shouldShowImage) {
+            return (
+                <img
+                    src={user.avatar}
+                    alt={user.fullName}
+                    className="w-12 h-12 rounded-full border-2 border-gray-200 object-cover transform hover:scale-105 transition-transform duration-200"
+                    onError={() => handleImageError(user.id)}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                />
+            );
+        }
+
+        // Fallback: Avatar với chữ cái đầu
+        return (
+            <div 
+                className={`w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center text-white font-bold text-sm transform hover:scale-105 transition-transform duration-200 ${getAvatarColor(user.fullName)}`}
+                title={user.fullName}
+            >
+                {getInitials(user.fullName)}
+            </div>
+        );
     };
 
     if (loading) {
@@ -78,17 +134,7 @@ const UserList = () => {
                                 >
                                     <td className="p-4 text-sm font-medium">{idx + 1}</td>
                                     <td className="p-4">
-                                        {u.avatar ? (
-                                            <img
-                                                src={u.avatar}
-                                                alt={u.fullName}
-                                                className="w-12 h-12 rounded-full border-2 border-gray-200 object-cover transform hover:scale-105 transition-transform duration-200"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-2xl text-gray-500">
-                                                <FiUser />
-                                            </div>
-                                        )}
+                                        <Avatar user={u} />
                                     </td>
                                     <td className="p-4 font-semibold text-base">{u.fullName}</td>
                                     <td className="p-4">
@@ -117,7 +163,6 @@ const UserList = () => {
                                             >
                                                 <FiEye /> Xem Chi Tiết
                                             </button>
-
                                         </div>
                                     </td>
                                 </tr>

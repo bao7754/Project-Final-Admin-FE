@@ -39,7 +39,7 @@ export const useCreateCategory = () => {
 export const useUpdateCategory = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, name }) => categoriesApi.updateCategory(id, { name }),
+    mutationFn: ({ id, name,imageUrl }) => categoriesApi.updateCategory(id, { name,imageUrl }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['category', variables.id] });
@@ -47,6 +47,9 @@ export const useUpdateCategory = () => {
     },
     onError: () => {
       toast.error('Có lỗi khi cập nhật danh mục!');
+      console.error('Có lỗi khi cập nhật danh mục!');
+      // Có thể log thêm thông tin lỗi nếu cần
+      // console.error(error);
     },
   });
 };
