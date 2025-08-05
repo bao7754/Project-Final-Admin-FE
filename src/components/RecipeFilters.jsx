@@ -51,9 +51,6 @@ const RecipeFilters = ({
           >
             <option value="newest">Mới nhất</option>
             <option value="oldest">Cũ nhất</option>
-            <option value="price-low">Giá thấp đến cao</option>
-            <option value="price-high">Giá cao đến thấp</option>
-            <option value="name">Tên A-Z</option>
           </select>
         </div>
 

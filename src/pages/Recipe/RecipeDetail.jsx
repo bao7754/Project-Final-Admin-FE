@@ -107,17 +107,6 @@ const RecipeDetail = () => {
                 <h1 className="text-5xl font-bold mb-4 leading-tight">
                   {recipe.name || 'No name'}
                 </h1>
-                <div className="flex items-center mb-6">
-                  <div className="flex items-center mr-6">
-                    {[...Array(5)].map((_, i) => (
-                      <FiStar key={i} className="text-yellow-300 fill-current" />
-                    ))}
-                    <span className="ml-2 text-sm">4.8 (124 đánh giá)</span>
-                  </div>
-                  <div className="text-sm">
-                    Tạo bởi <span className="font-semibold">Chef Master</span>
-                  </div>
-                </div>
                 <div className="flex space-x-4">
                   {isAdmin && needsApproval && (
                     <button

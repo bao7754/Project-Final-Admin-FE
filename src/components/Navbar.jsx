@@ -50,7 +50,7 @@ const Navbar = () => {
                 <FiStar className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                Ẩm Thực Việt
+               Món Ngon Mỗi Ngày 
               </span>
             </Link>
           </div>

@@ -30,7 +30,7 @@ const Login = () => {
             <div className="absolute inset-0 bg-black/5"></div>
             <div className="relative z-10">
               <div className="text-6xl mb-3">🍴</div>
-              <h1 className="text-2xl font-bold text-white mb-2">Ẩm thực Việt</h1>
+              <h1 className="text-2xl font-bold text-white mb-2">MÓN NGON MỖI NGÀY</h1>
               <p className="text-orange-100 text-sm">Khám phá thế giới ẩm thực tuyệt vời</p>
             </div>
           </div>

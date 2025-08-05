@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { recipesApi } from '../api';
 
-export const useRecipes = (page = 1, limit = 20) => {
+export const useRecipes = (page = 1, limit = 999) => {
   return useQuery({
     queryKey: ['recipes', page, limit],
     queryFn: async () => {

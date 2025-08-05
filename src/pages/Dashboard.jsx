@@ -96,10 +96,23 @@ const Dashboard = () => {
 
   // Computed statistics
   const stats = useMemo(() => {
-    if (!data?.data) return {};
+    if (!data?.data) return {
+      totalRecipes: 0,
+      approvedRecipes: 0,
+      pendingRecipes: 0,
+      approvalRate: 0,
+      trendData: [],
+      categoryData: [],
+      topFavoriteRecipes: [],
+      totalUsers: 0,
+      totalPremiumUsers: 0,
+      totalCookedRecipes: 0,
+      totalRevenue: 0,
+      premiumRate: 0
+    };
 
-    const recipes = data.data;
-    const totalRecipes = data.pagination.total || 0;
+    const recipes = data.data || [];
+    const totalRecipes = data.pagination?.total || 0;
     const approvedRecipes = data.pagination?.approvedCount ||
       recipes.filter(recipe => Boolean(recipe.approvedAt)).length || 0;
     const pendingRecipes = totalRecipes - approvedRecipes;
@@ -131,8 +144,9 @@ const Dashboard = () => {
     // Category distribution
     const categoryStats = {};
     recipes.forEach(recipe => {
-      recipe.categoryIds?.forEach(cat => {
-        const catName = cat.name || cat || 'Khác';
+      const categoryIds = recipe.categoryIds || [];
+      categoryIds.forEach(cat => {
+        const catName = cat?.name || cat || 'Khác';
         categoryStats[catName] = (categoryStats[catName] || 0) + 1;
       });
     });
@@ -144,8 +158,10 @@ const Dashboard = () => {
 
     // Process favorites data to get top favorite recipes
     const favoriteRecipeStats = {};
-    if (favoritesData) {
-      favoritesData.forEach(favorite => {
+    const favoritesArray = Array.isArray(favoritesData) ? favoritesData : [];
+    
+    favoritesArray.forEach(favorite => {
+      if (favorite?.recipeId?.id) {
         const recipeId = favorite.recipeId.id;
         if (favoriteRecipeStats[recipeId]) {
           favoriteRecipeStats[recipeId].count++;
@@ -155,8 +171,8 @@ const Dashboard = () => {
             recipe: favorite.recipeId
           };
         }
-      });
-    }
+      }
+    });
 
     const topFavoriteRecipes = Object.values(favoriteRecipeStats)
       .sort((a, b) => b.count - a.count)
@@ -190,6 +206,9 @@ const Dashboard = () => {
   ).slice(0, 10);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+  // Calculate favorites count safely
+  const favoritesCount = Array.isArray(favoritesData) ? favoritesData.length : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -266,7 +285,7 @@ const Dashboard = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Lượt yêu thích</p>
-                <p className="text-2xl font-bold text-gray-900">{favoritesData?.length || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{favoritesCount}</p>
               </div>
             </div>
           </div>
@@ -388,7 +407,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Rest of the existing code remains the same... */}
         {/* Simplified Popular Recipes */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -400,7 +418,7 @@ const Dashboard = () => {
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Tổng lượt yêu thích</p>
-              <p className="text-xl font-bold text-red-500">{favoritesData?.length || 0}</p>
+              <p className="text-xl font-bold text-red-500">{favoritesCount}</p>
             </div>
           </div>
 
