@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FiMail, FiLock } from 'react-icons/fi';
 import { useLogin } from '../hooks/useAuth';
@@ -6,9 +6,17 @@ import { useLogin } from '../hooks/useAuth';
 const Login = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const loginMutation = useLogin();
+  const [showSlogan, setShowSlogan] = useState(false);
 
   const onSubmit = (data) => {
-    loginMutation.mutate(data);
+    // Hiển thị slogan
+    setShowSlogan(true);
+    
+    // Sau 2 giây thì ẩn slogan và thực hiện login
+    setTimeout(() => {
+      setShowSlogan(false);
+      loginMutation.mutate(data);
+    }, 1000);
   };
 
   return (
@@ -21,6 +29,25 @@ const Login = () => {
         <div className="absolute top-32 right-32 text-yellow-200/25 text-4xl">🥘</div>
         <div className="absolute bottom-32 left-32 text-green-200/25 text-4xl">🥗</div>
       </div>
+
+      {/* Slogan Overlay */}
+      {showSlogan && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 mx-4 max-w-md w-full shadow-2xl border-4 border-orange-500 animate-pulse">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-orange-600 mb-3">
+                Hãy đem đến những món ăn chất lượng nhất
+              </h3>
+              <p className="text-lg font-semibold text-red-500">
+                Đậm đà hương vị Việt
+              </p>
+              <div className="mt-4 flex justify-center">
+                <div className="w-8 h-8 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative w-full max-w-md">
         {/* Main login card */}
@@ -42,7 +69,7 @@ const Login = () => {
               <p className="text-gray-500 text-sm">Quản lý công thức nấu ăn của bạn</p>
             </div>
 
-            <div className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📧 Email
@@ -55,10 +82,11 @@ const Login = () => {
                     id="email"
                     type="email"
                     autoComplete="email"
-                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${errors.email
+                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${
+                      errors.email
                         ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
                         : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
-                      } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
+                    } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
                     placeholder="chef@cookbook.com"
                     {...register('email', {
                       required: 'Email là bắt buộc',
@@ -89,10 +117,11 @@ const Login = () => {
                     id="password"
                     type="password"
                     autoComplete="current-password"
-                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${errors.password
+                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${
+                      errors.password
                         ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
                         : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
-                      } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
+                    } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
                     placeholder="••••••••"
                     {...register('password', {
                       required: 'Mật khẩu là bắt buộc',
@@ -113,8 +142,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                onClick={handleSubmit(onSubmit)}
-                disabled={loginMutation.isPending}
+                disabled={loginMutation.isPending || showSlogan}
                 className="w-full py-4 px-6 rounded-2xl text-white font-bold bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none text-sm"
               >
                 {loginMutation.isPending ? (
@@ -122,13 +150,18 @@ const Login = () => {
                     <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
                     <span>Đang đăng nhập... </span>
                   </span>
+                ) : showSlogan ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span>Đang xử lý... </span>
+                  </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     Đăng nhập
                   </span>
                 )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

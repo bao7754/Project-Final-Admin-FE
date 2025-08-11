@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FiMenu, FiX, FiLogOut, FiStar, FiHome, FiBook } from 'react-icons/fi';
+import { FiMenu, FiX, FiLogOut, FiHome, FiBook } from 'react-icons/fi';
 import useAuthStore from '../store/authStore';
+import logo from '../assets/logo.png'; 
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -10,7 +11,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Theo dõi scroll để thay đổi style navbar
+  // Track scroll to change navbar style
   useEffect(() => {
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
@@ -21,7 +22,7 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Ẩn Navbar trên trang login
+  // Hide Navbar on login page
   const hideNavbarRoutes = ['/login'];
   if (hideNavbarRoutes.includes(location.pathname)) {
     return null;
@@ -46,18 +47,19 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-105">
-                <FiStar className="h-5 w-5 text-white" />
-              </div>
+              <img 
+                src={logo} 
+                alt="Món Ngon Mỗi Ngày Logo" 
+                className="h-15 w-auto group-hover:scale-105 transition-all duration-300" // Increased from h-10 to h-14
+              />
               <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-               Món Ngon Mỗi Ngày 
+                Món Ngon Mỗi Ngày
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            
             <Link 
               to="/recipes" 
               className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -86,16 +88,7 @@ const Navbar = () => {
             {/* User Section */}
             {isAuthenticated ? (
               <div className="flex items-center space-x-3 ml-6 pl-6 border-l border-gray-200">
-                <div className="flex items-center space-x-3 bg-gray-50 rounded-full p-2 pr-4">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 shadow-md">
-                    <span className="text-sm font-semibold text-white">
-                      {user?.username?.charAt(0)?.toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {user?.username}
-                  </span>
-                </div>
+               
                 <button 
                   onClick={handleLogout}
                   className="p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 group"

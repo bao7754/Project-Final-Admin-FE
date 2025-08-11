@@ -3,7 +3,8 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
   body {
-    @apply text-gray-900bg-gray-50;
+    color: #1a202c; 
+    background-color: #f9fafb; 
   }
 }
 
@@ -11,12 +12,14 @@
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

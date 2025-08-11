@@ -295,7 +295,7 @@ const Recipes = () => {
 };
 
 // Separate RecipeCard component for better organization
-const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
+const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
   const isApproved = Boolean(recipe.approvedAt);
 
   return (
@@ -337,14 +337,6 @@ const RecipeCard = React.memo(({ recipe, onApprove, onEdit, onDelete }) => {
             </Link>
 
             <div className="flex gap-2">
-              <button
-                onClick={() => onApprove(recipe._id)}
-                className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-                title="Duyệt công thức"
-                disabled={isApproved}
-              >
-                <FiCheckCircle className="h-5 w-5" />
-              </button>
 
               <button
                 onClick={() => onEdit(recipe._id)}
