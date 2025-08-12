@@ -34,22 +34,15 @@ import {
 } from 'recharts';
 import { useRecipes } from '../hooks/useRecipes';
 import { useFavorites } from '../hooks/userFavorites';
-// import { usepremiumUsers } from '../hooks/usePremiumUsers'; // Import your premium users hook
+import { usepremiumUsers } from '../hooks/useAuth'; 
 import Loading from '../components/Loading';
 
 const Dashboard = () => {
   const { data, isLoading, refetch } = useRecipes(1, 9999);
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
-  // const { data: premiumData, isLoading: premiumLoading } = usepremiumUsers();
+  // Sử dụng đúng hook để lấy dữ liệu premium users
+  const { data: premiumData, isLoading: premiumLoading } = usepremiumUsers();
 
-  // Temporary mock data - replace with real API call later
-  const premiumData = {
-    totalUsers: 24,
-    totalRecipes: 17,
-    totalPremiumUsers: 8,
-    totalCookedRecipes: 95
-  };
-  const premiumLoading = false;
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -117,10 +110,12 @@ const Dashboard = () => {
       recipes.filter(recipe => Boolean(recipe.approvedAt)).length || 0;
     const pendingRecipes = totalRecipes - approvedRecipes;
 
-    // Premium user statistics
+    // Premium user statistics - sử dụng dữ liệu từ API
     const totalPremiumUsers = premiumData?.totalPremiumUsers || 0;
     const totalUsers = premiumData?.totalUsers || 0;
     const totalCookedRecipes = premiumData?.totalCookedRecipes || 0;
+    
+    // Tính toán doanh thu dựa trên số premium users
     const premiumPrice = 20000; // 20,000 VND per premium user
     const totalRevenue = totalPremiumUsers * premiumPrice;
     const premiumRate = totalUsers > 0 ? Math.round((totalPremiumUsers / totalUsers) * 100) : 0;
@@ -259,7 +254,7 @@ const Dashboard = () => {
                 <FiCheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đã duyệt</p>
+    
                 <p className="text-2xl font-bold text-gray-900">{stats.approvedRecipes}</p>
                 <p className="text-xs text-green-600">({stats.approvalRate}% tỷ lệ duyệt)</p>
               </div>
@@ -334,14 +329,7 @@ const Dashboard = () => {
                   fill="url(#colorRecipes)"
                   name="Tổng số công thức"
                 />
-                <Area
-                  type="monotone"
-                  dataKey="approved"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  fill="url(#colorApproved)"
-                  name="Đã duyệt"
-                />
+        
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -408,65 +396,7 @@ const Dashboard = () => {
         </div>
 
         {/* Simplified Popular Recipes */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg mr-3">
-                <FiHeart className="h-5 w-5 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">Top 10 công thức được yêu thích nhất</h3>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Tổng lượt yêu thích</p>
-              <p className="text-xl font-bold text-red-500">{favoritesCount}</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {stats.topFavoriteRecipes.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
-                <div className="p-3 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4">
-                  <FiHeart className="h-10 w-10 mx-auto text-gray-400" />
-                </div>
-                <p className="text-lg font-medium mb-1">Chưa có dữ liệu yêu thích</p>
-                <p className="text-gray-400">Các công thức được yêu thích sẽ hiển thị tại đây</p>
-              </div>
-            ) : (
-              stats.topFavoriteRecipes.slice(0, 10).map((recipe, index) => (
-                <div key={recipe._id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${index === 0 ? 'bg-yellow-500' :
-                        index === 1 ? 'bg-gray-400' :
-                          index === 2 ? 'bg-orange-500' :
-                            'bg-blue-500'
-                      }`}>
-                      {index + 1}
-                    </div>
-
-                    <img
-                      className="h-12 w-12 rounded-lg object-cover"
-                      src={recipe.imageUrls?.[0] || 'https://via.placeholder.com/48x48'}
-                      alt={recipe.name}
-                    />
-
-                    <div>
-                      <h4 className="font-medium text-gray-900">{recipe.name}</h4>
-                      <p className="text-sm text-gray-500 flex items-center">
-                        <FiBook className="h-3 w-3 mr-1" />
-                        Công thức nấu ăn
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 bg-red-50 px-3 py-2 rounded-lg">
-                    <FiHeart className="h-4 w-4 text-red-500" />
-                    <span className="font-semibold text-red-600">{recipe.favoriteCount}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        
 
         {/* Simplified Latest Recipes Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -514,7 +444,7 @@ const Dashboard = () => {
                   </tr>
                 ) : (
                   latestRecipes.map((recipe) => {
-                    const isApproved = Boolean(recipe.approvedAt);
+                
                     return (
                       <tr key={recipe._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
@@ -543,14 +473,7 @@ const Dashboard = () => {
                             {new Date(recipe.createdAt).toLocaleTimeString('vi-VN')}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isApproved
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {isApproved ? 'Đã duyệt' : 'Chờ duyệt'}
-                          </span>
-                        </td>
+                       
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
                             <Link

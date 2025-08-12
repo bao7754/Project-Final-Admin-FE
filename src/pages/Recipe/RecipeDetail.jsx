@@ -98,12 +98,7 @@ const RecipeDetail = () => {
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-16 -translate-x-16"></div>
 
               <div className="relative z-10">
-                <div className="flex items-center mb-4">
-                  <FiAward className="text-3xl mr-3" />
-                  <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
-                    {needsApproval ? 'Chờ duyệt' : 'Đã duyệt'}
-                  </span>
-                </div>
+            
                 <h1 className="text-5xl font-bold mb-4 leading-tight">
                   {recipe.name || 'No name'}
                 </h1>

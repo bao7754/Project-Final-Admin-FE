@@ -359,14 +359,7 @@ const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
       </div>
 
       {/* Status badge */}
-      <div className="flex items-center space-x-2">
-        <span className={`text-xs px-2 py-1 rounded-full ${isApproved
-            ? 'bg-green-100 text-green-800'
-            : 'bg-yellow-100 text-yellow-800'
-          }`}>
-          {isApproved ? 'Đã duyệt' : 'Chưa duyệt'}
-        </span>
-      </div>
+      
     </div>
   );
 });

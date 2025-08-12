@@ -55,20 +55,7 @@ const RecipeFilters = ({
         </div>
 
         {/* Approval Status Filter */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Trạng thái
-          </label>
-          <select
-            value={showApproved}
-            onChange={(e) => onApprovedChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-          >
-            <option value="all">Tất cả</option>
-            <option value="approved">Đã duyệt</option>
-            <option value="pending">Chưa duyệt</option>
-          </select>
-        </div>
+        
       </div>
     </div>
   );
