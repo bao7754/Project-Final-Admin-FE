@@ -296,8 +296,6 @@ const Recipes = () => {
 
 // Separate RecipeCard component for better organization
 const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
-  const isApproved = Boolean(recipe.approvedAt);
-
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden p-4 hover:shadow-lg transition-shadow">
       <div className="flex mb-4">

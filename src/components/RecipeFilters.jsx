@@ -7,8 +7,6 @@ const RecipeFilters = ({
   onCategoryChange,
   sortBy,
   onSortChange,
-  showApproved,
-  onApprovedChange
 }) => {
   const { data: categories = [] } = useCategories();
 
