@@ -40,6 +40,10 @@ export const authApi = {
 };
 
 export const recipesApi = {
+  createRecipe: async (recipeData) => {
+    const { data } = await api.post('/api/recipes', recipeData);
+    return data;
+  },
   getRecipes: async (page = 1, limit = 10) => {
     const { data } = await api.get(`/api/recipes/?page=${page}&limit=${limit}`);
     return data;
@@ -63,7 +67,7 @@ export const recipesApi = {
     const { data } = await api.delete(`/api/recipes/${id}`);
     return data;
   },
-   getRecipeId: async (recipeId) => {
+  getRecipeId: async (recipeId) => {
     if (!recipeId) {
       throw new Error('Recipe ID is required');
     }
@@ -81,9 +85,9 @@ export const recipesApi = {
       // ...error handling...
       throw new Error(
         error.response?.data?.message ||
-        (error.response?.status === 404
-          ? '404'
-          : error.message || 'Lỗi không xác định')
+          (error.response?.status === 404
+            ? '404'
+            : error.message || 'Lỗi không xác định')
       );
     }
   },
