@@ -201,10 +201,6 @@ const Dashboard = () => {
   ).slice(0, 10);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-
-  // Calculate favorites count safely
-  const favoritesCount = Array.isArray(favoritesData) ? favoritesData.length : 0;
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 pt-20 md:pl-72">
@@ -244,43 +240,6 @@ const Dashboard = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Tổng số công thức</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalRecipes}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <FiCheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-    
-                <p className="text-2xl font-bold text-gray-900">{stats.approvedRecipes}</p>
-                <p className="text-xs text-green-600">({stats.approvalRate}% tỷ lệ duyệt)</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-            <div className="flex items-center">
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <FiCalendar className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Chờ duyệt</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingRecipes}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-            <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <FiHeart className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Lượt yêu thích</p>
-                <p className="text-2xl font-bold text-gray-900">{favoritesCount}</p>
               </div>
             </div>
           </div>
