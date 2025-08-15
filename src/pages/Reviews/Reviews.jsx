@@ -26,7 +26,6 @@ const UserAvatar = React.memo(({ user, size = 12 }) => {
   }, [user]);
 
   const handleImageError = () => {
-    console.log('Avatar failed to load:', imageSrc);
     setImageError(true);
   };
 
@@ -174,14 +173,11 @@ const Reviews = () => {
       }
 
       try {
-        console.log('Deleting review with ID:', reviewId);
         await deleteReview.mutateAsync(reviewId);
         setReviews((prevReviews) =>
           prevReviews.filter((review) => review.id !== reviewId)
         );
-        console.log('Review deleted successfully');
       } catch (error) {
-        console.error('Error deleting review:', error);
         alert(
           `Có lỗi xảy ra khi xóa đánh giá: ${
             error.message || 'Vui lòng thử lại.'
@@ -330,15 +326,6 @@ const Reviews = () => {
 const ReviewCard = React.memo(({ review, onDelete }) => {
   const { data: recipe, isLoading: isLoadingRecipe, error: recipeError } = useGetRecipeId(review.recipeId);
 
-  // Debug log để xem cấu trúc userId
-  React.useEffect(() => {
-    console.log('User data structure:', {
-      userId: review.userId,
-      userType: typeof review.userId,
-      userKeys: review.userId ? Object.keys(review.userId) : 'No userId'
-    });
-  }, [review.userId]);
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
@@ -353,7 +340,6 @@ const ReviewCard = React.memo(({ review, onDelete }) => {
     if (!userId) return 'Người dùng ẩn danh';
     return userId.fullName || userId.name || 'Người dùng';
   };
-
 
   const displayRecipeName = () => {
     if (isLoadingRecipe) return 'Đang tải tên công thức...';
