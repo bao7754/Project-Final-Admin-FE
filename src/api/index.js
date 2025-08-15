@@ -63,10 +63,29 @@ export const recipesApi = {
     const { data } = await api.delete(`/api/recipes/${id}`);
     return data;
   },
-
-  createRecipe: async (recipeData) => {
-    const { data } = await api.post('/api/recipes', recipeData);
-    return data;
+   getRecipeId: async (recipeId) => {
+    if (!recipeId) {
+      throw new Error('Recipe ID is required');
+    }
+    try {
+      const { data } = await api.get(`/api/recipes/read/${recipeId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('token') && {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          }),
+        },
+      });
+      return data;
+    } catch (error) {
+      // ...error handling...
+      throw new Error(
+        error.response?.data?.message ||
+        (error.response?.status === 404
+          ? '404'
+          : error.message || 'Lỗi không xác định')
+      );
+    }
   },
 
   getRecipeSteps: async (recipeId) => {
@@ -84,6 +103,15 @@ export const recipesApi = {
   },
   deleteStep: async (stepId) => {
     const { data } = await api.delete(`/api/steps/${stepId}`);
+    return data;
+  },
+
+  getReviews: async () => {
+    const { data } = await api.get(`/api/reviews`);
+    return data;
+  },
+  deleteReview: async (id) => {
+    const { data } = await api.delete(`/api/reviews/${id}`);
     return data;
   },
 };

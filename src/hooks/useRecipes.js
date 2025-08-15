@@ -39,6 +39,27 @@ export const useRecipe = (id) => {
   });
 };
 
+export const useGetRecipeId = (recipeId) => {
+  return useQuery({
+    queryKey: ['recipe', recipeId],
+    queryFn: async () => {
+      const data = await recipesApi.getRecipeId(recipeId);
+      console.log('[useGetRecipeId] API response:', data);
+      return data;
+    },
+    enabled: !!recipeId,
+    retry: 1,
+    staleTime: 1000 * 60 * 10,
+    onSuccess: (data) => {
+      console.log('[useGetRecipeId] Success:', recipeId, data);
+    },
+    onError: (error) => {
+      console.error('[useGetRecipeId] Error:', recipeId, error);
+    }
+  });
+};
+
+
 export const useUpdateRecipe = () => {
   const queryClient = useQueryClient();
 
@@ -248,3 +269,33 @@ export const useDeleteStep = () => {
     },
   });
 };
+
+export const useReviews = () => {
+  return useQuery({
+    queryKey: ['reviews'],
+    queryFn: () => recipesApi.getReviews(),
+    retry: 1,
+    staleTime: 1000 * 60,
+    onSuccess: (data) => {
+      console.log('[useReviews] Success:', data);
+    },
+    onError: (error) => {
+      console.error('[useReviews] Error:', error);
+    }
+  });
+}
+
+export const useDeleteReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => recipesApi.deleteReview(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      toast.success('Đã xóa đánh giá!');
+    },
+    onError: (error) => {
+      console.error('Lỗi khi xóa đánh giá:', error);
+      toast.error('Có lỗi khi xóa đánh giá!');
+    }
+  });
+}

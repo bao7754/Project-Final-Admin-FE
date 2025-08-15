@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiHome, FiPieChart, FiBook, FiUsers, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiPieChart, FiBook, FiUsers, FiLogOut, FiStar } from 'react-icons/fi';
 import useAuthStore from '../../src/store/authStore';
 
 const Sidebar = () => {
@@ -11,14 +11,14 @@ const Sidebar = () => {
     try {
       // Hiển thị confirm dialog
       const confirmLogout = window.confirm('Bạn có chắc muốn đăng xuất không?');
-      
+
       if (confirmLogout) {
         // Thực hiện đăng xuất
         await logout();
-        
+
         // Chuyển hướng về trang đăng nhập
         navigate('/login', { replace: true });
-        
+
         // Hiển thị thông báo thành công (tuỳ chọn)
         // toast.success('Đã đăng xuất thành công!');
       }
@@ -33,7 +33,9 @@ const Sidebar = () => {
     { name: 'Dashboard', icon: <FiPieChart />, path: '/dashboard', type: 'link' },
     { name: 'Danh mục', icon: <FiHome />, path: '/categories', type: 'link' },
     { name: 'Công thức', icon: <FiBook />, path: '/recipes', type: 'link' },
+    { name: 'Đánh giá', icon: <FiStar />, path: '/reviews', type: 'link' },
     { name: 'Người dùng', icon: <FiUsers />, path: '/users', type: 'link' },
+
     { name: 'Đăng xuất', icon: <FiLogOut />, path: '#', type: 'action', action: handleLogout },
   ];
 
@@ -62,10 +64,9 @@ const Sidebar = () => {
                 key={item.name}
                 to={item.path}
                 className={({ isActive }) =>
-                  `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-amber-50 text-amber-600'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
+                  `group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${isActive
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
                   }`
                 }
               >

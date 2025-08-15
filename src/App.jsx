@@ -16,6 +16,7 @@ import Category from './pages/Category/Category';
 import UserList from './pages/User/User';
 import UserDetail from './pages/User/DetailUser';
 import AddStep from './pages/Steps/AddSpes';
+import Reviews from './pages/Reviews/Reviews';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ const AppContent = () => {
         <Route path="/categories" element={<Category />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:id" element={<UserDetail />} />
+        <Route path="/reviews" element={<Reviews />} />
       </Routes>
     </>
   );
