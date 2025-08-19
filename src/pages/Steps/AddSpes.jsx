@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiClock, FiCheck, FiPlus, FiX, FiCamera, FiUpload, FiTrash2 } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiCheck, FiPlus, FiX, FiCamera, FiUpload, FiTrash2, FiVideo, FiImage } from 'react-icons/fi';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { useAddStep } from '../../hooks/useRecipes';
@@ -25,79 +25,104 @@ const AddStep = () => {
   const addStepMutation = useAddStep();
   const uploadImageMutation = useUploadImage();
 
-  // Validate image file - Same as RecipeForm
-  const validateImageFile = (file) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  // Validate file (both image and video)
+  const validateFile = (file) => {
+    const maxImageSize = 10 * 1024 * 1024; // 10MB for images
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB for videos
+    const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/avi', 'video/mov', 'video/quicktime'];
     
     if (!file) {
       return { isValid: false, error: 'Không có file được chọn' };
     }
+
+    const fileType = file.type.toLowerCase();
+    const isImage = allowedImageTypes.includes(fileType);
+    const isVideo = allowedVideoTypes.includes(fileType);
     
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
-      return { isValid: false, error: 'Định dạng file không được hỗ trợ. Chỉ chấp nhận JPG, PNG, WebP, GIF' };
+    if (!isImage && !isVideo) {
+      return { 
+        isValid: false, 
+        error: 'Định dạng file không được hỗ trợ. Chỉ chấp nhận JPG, PNG, WebP, GIF cho ảnh và MP4, WebM, AVI, MOV cho video' 
+      };
     }
     
+    const maxSize = isVideo ? maxVideoSize : maxImageSize;
+    const fileTypeName = isVideo ? 'video' : 'ảnh';
+    const maxSizeName = isVideo ? '50MB' : '10MB';
+    
     if (file.size > maxSize) {
-      return { isValid: false, error: 'File quá lớn. Kích thước tối đa là 10MB' };
+      return { 
+        isValid: false, 
+        error: `File ${fileTypeName} quá lớn. Kích thước tối đa là ${maxSizeName}` 
+      };
     }
 
     if (!file.name || file.name.length > 255) {
       return { isValid: false, error: 'Tên file không hợp lệ' };
     }
     
-    return { isValid: true };
+    return { isValid: true, isVideo };
   };
 
-  // Upload single image - Same logic as RecipeForm
-  const uploadSingleImage = async (file, index) => {
+  // Check if URL is a video
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    const urlLower = url.toLowerCase();
+    return urlLower.includes('.mp4') || 
+           urlLower.includes('.webm') || 
+           urlLower.includes('.avi') || 
+           urlLower.includes('.mov');
+  };
+
+  // Upload single file (image or video)
+  const uploadSingleFile = async (file, index) => {
     const formData = new FormData();
-    formData.append('files', file); // Same field name as RecipeForm
+    formData.append('files', file);
 
     return new Promise((resolve, reject) => {
       uploadImageMutation.mutate(formData, {
         onSuccess: (response) => {
-          let imageUrl;
+          let fileUrl;
           
-          // Same response handling logic as RecipeForm
           if (Array.isArray(response)) {
             if (response.length > 0 && response[0]?.url) {
-              imageUrl = response[0].url;
+              fileUrl = response[0].url;
             } else if (response.length > 0) {
-              imageUrl = response[0];
+              fileUrl = response[0];
             }
           }
           else if (response?.data?.url) {
-            imageUrl = response.data.url;
+            fileUrl = response.data.url;
           } else if (response?.url) {
-            imageUrl = response.url;
+            fileUrl = response.url;
           } else if (response?.data?.filePath) {
-            imageUrl = response.data.filePath;
+            fileUrl = response.data.filePath;
           } else if (response?.filePath) {
-            imageUrl = response.filePath;
+            fileUrl = response.filePath;
           } else if (typeof response === 'string') {
-            imageUrl = response;
+            fileUrl = response;
           } else {
-            imageUrl = response?.data || response;
+            fileUrl = response?.data || response;
           }
           
-          console.log(`✅ Upload successful for image ${index + 1}`);
-          console.log(`📷 Image URL: ${imageUrl}`);
-          resolve(imageUrl);
+          console.log(`✅ Upload successful for file ${index + 1}`);
+          console.log(`📁 File URL: ${fileUrl}`);
+          resolve(fileUrl);
         },
         onError: (error) => {
-          console.error(`❌ Upload failed for image ${index + 1}:`, error);
+          console.error(`❌ Upload failed for file ${index + 1}:`, error);
           reject(error);
         }
       });
     });
   };
 
-  // Handle image upload from computer - Same as RecipeForm
-  const handleImageUpload = async (file) => {
+  // Handle file upload from computer
+  const handleFileUpload = async (file) => {
     if (!file) return;
 
-    const validation = validateImageFile(file);
+    const validation = validateFile(file);
     if (!validation.isValid) {
       setErrorMessage(validation.error);
       setTimeout(() => setErrorMessage(''), 5000);
@@ -108,31 +133,32 @@ const AddStep = () => {
     setUploadingImages(prev => ({ ...prev, [uploadKey]: true }));
 
     try {
-      setSuccessMessage('Đang upload ảnh...');
+      const fileType = validation.isVideo ? 'video' : 'ảnh';
+      setSuccessMessage(`Đang upload ${fileType}...`);
       
-      const imageUrl = await uploadSingleImage(file, imageUrls.length);
+      const fileUrl = await uploadSingleFile(file, imageUrls.length);
       
-      if (imageUrl) {
-        setImageUrls(prev => [...prev, imageUrl]);
-        setSuccessMessage('Upload ảnh thành công!');
+      if (fileUrl) {
+        setImageUrls(prev => [...prev, fileUrl]);
+        setSuccessMessage(`Upload ${fileType} thành công!`);
         setTimeout(() => setSuccessMessage(''), 3000);
       } else {
-        throw new Error('Không nhận được URL ảnh từ server');
+        throw new Error('Không nhận được URL file từ server');
       }
     } catch (error) {
       console.error('Upload error:', error);
       const errorMsg = error?.response?.data?.message || 
                       error?.response?.data?.error ||
                       error.message || 
-                      'Lỗi upload ảnh không xác định';
-      setErrorMessage(`Lỗi upload ảnh: ${errorMsg}`);
+                      'Lỗi upload file không xác định';
+      setErrorMessage(`Lỗi upload file: ${errorMsg}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setUploadingImages(prev => ({ ...prev, [uploadKey]: false }));
     }
   };
 
-  const handleRemoveImage = (idx) => {
+  const handleRemoveFile = (idx) => {
     setImageUrls(imageUrls.filter((_, i) => i !== idx));
   };
 
@@ -152,7 +178,7 @@ const AddStep = () => {
     }
     
     if (imageUrls.length === 0) {
-      setErrorMessage('Vui lòng thêm ít nhất một ảnh minh họa!');
+      setErrorMessage('Vui lòng thêm ít nhất một ảnh hoặc video minh họa!');
       setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
@@ -293,13 +319,13 @@ const AddStep = () => {
               )}
             </div>
 
-            {/* Images */}
+            {/* Media Files */}
             <div>
               <label className="block text-gray-700 font-semibold mb-4 flex items-center">
                 <FiCamera className="mr-2 text-blue-600" />
-                Hình ảnh minh họa <span className="text-red-500">*</span>
+                Hình ảnh & Video minh họa <span className="text-red-500">*</span>
                 <span className="text-sm font-normal text-gray-500 ml-2">
-                  ({imageUrls.length}/10 ảnh)
+                  ({imageUrls.length}/10 files)
                 </span>
               </label>
 
@@ -308,15 +334,16 @@ const AddStep = () => {
                 <div className="text-center">
                   <input
                     type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                    onChange={(e) => handleImageUpload(e.target.files[0])}
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4,video/webm,video/avi,video/mov"
+                    onChange={(e) => handleFileUpload(e.target.files[0])}
                     className="hidden"
                     ref={fileInputRef}
                     disabled={isUploading || imageUrls.length >= 10}
                   />
                   
-                  <div className="mb-4">
-                    <FiCamera className="mx-auto text-4xl text-gray-400 mb-2" />
+                  <div className="mb-4 flex justify-center gap-4">
+                    <FiImage className="text-4xl text-blue-400" />
+                    <FiVideo className="text-4xl text-purple-400" />
                   </div>
                   
                   <button
@@ -328,16 +355,21 @@ const AddStep = () => {
                     <FiUpload className="h-5 w-5" />
                     <span>
                       {isUploading ? 'Đang tải...' : 
-                       imageUrls.length >= 10 ? 'Đã đủ 10 ảnh' : 'Chọn ảnh từ máy'}
+                       imageUrls.length >= 10 ? 'Đã đủ 10 files' : 'Chọn ảnh/video từ máy'}
                     </span>
                   </button>
                   
-                  <p className="text-sm text-gray-500 mt-3">
-                    Hỗ trợ: JPG, PNG, WebP, GIF (tối đa 10MB mỗi ảnh)
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Tối đa 10 ảnh cho mỗi bước
-                  </p>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Ảnh:</span> JPG, PNG, WebP, GIF (tối đa 10MB)
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Video:</span> MP4, WebM, AVI, MOV (tối đa 50MB)
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Tối đa 10 files cho mỗi bước
+                    </p>
+                  </div>
                 </div>
 
                 {/* Upload Progress */}
@@ -351,18 +383,18 @@ const AddStep = () => {
                     </div>
                     <div className="text-sm text-gray-600 mt-2 text-center flex items-center justify-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                      Đang tải lên và xử lý ảnh...
+                      Đang tải lên và xử lý file...
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Image Preview Grid */}
+              {/* Media Preview Grid */}
               {imageUrls.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-gray-700">
-                      Ảnh đã tải lên ({imageUrls.length})
+                      Files đã tải lên ({imageUrls.length})
                     </h4>
                     <button
                       type="button"
@@ -375,50 +407,70 @@ const AddStep = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {imageUrls.map((src, idx) => (
-                      <motion.div 
-                        key={idx} 
-                        className="relative group"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3, delay: idx * 0.1 }}
-                      >
-                        <div className="aspect-square rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-300">
-                          <img
-                            src={src}
-                            alt={`Ảnh bước ${stepNumber} - ${idx + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              console.error(`Failed to load image ${idx + 1}:`, src);
-                              e.target.src = 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop';
-                            }}
-                            loading="lazy"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(idx)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-600 transform hover:scale-110 shadow-lg"
-                          aria-label={`Xóa ảnh ${idx + 1}`}
+                    {imageUrls.map((src, idx) => {
+                      const isVideo = isVideoUrl(src);
+                      return (
+                        <motion.div 
+                          key={idx} 
+                          className="relative group"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: idx * 0.1 }}
                         >
-                          <FiTrash2 className="h-3 w-3" />
-                        </button>
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <div className="bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                            Ảnh {idx + 1}
+                          <div className="aspect-square rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-300">
+                            {isVideo ? (
+                              <video
+                                src={src}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                controls
+                                preload="metadata"
+                                // eslint-disable-next-line no-unused-vars
+                                onError={(e) => {
+                                  console.error(`Failed to load video ${idx + 1}:`, src);
+                                }}
+                              />
+                            ) : (
+                              <img
+                                src={src}
+                                alt={`Ảnh bước ${stepNumber} - ${idx + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  console.error(`Failed to load image ${idx + 1}:`, src);
+                                  e.target.src = 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop';
+                                }}
+                                loading="lazy"
+                              />
+                            )}
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(idx)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 text-sm opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-600 transform hover:scale-110 shadow-lg"
+                            aria-label={`Xóa ${isVideo ? 'video' : 'ảnh'} ${idx + 1}`}
+                          >
+                            <FiTrash2 className="h-3 w-3" />
+                          </button>
+                          <div className="absolute bottom-2 left-2 right-2">
+                            <div className="bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">
+                              {isVideo ? <FiVideo className="h-3 w-3" /> : <FiImage className="h-3 w-3" />}
+                              {isVideo ? 'Video' : 'Ảnh'} {idx + 1}
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {imageUrls.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  <FiCamera className="mx-auto text-4xl mb-2 opacity-50" />
-                  <p className="font-medium">Chưa có ảnh minh họa</p>
-                  <p className="text-sm">Vui lòng thêm ít nhất 1 ảnh để minh họa cho bước này</p>
+                  <div className="flex justify-center gap-4 mb-2">
+                    <FiImage className="text-4xl opacity-50" />
+                    <FiVideo className="text-4xl opacity-50" />
+                  </div>
+                  <p className="font-medium">Chưa có ảnh hoặc video minh họa</p>
+                  <p className="text-sm">Vui lòng thêm ít nhất 1 file để minh họa cho bước này</p>
                 </div>
               )}
             </div>
@@ -463,7 +515,7 @@ const AddStep = () => {
                 </span>
                 <span className={`flex items-center gap-1 ${imageUrls.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                   {imageUrls.length > 0 ? <FiCheck className="h-4 w-4" /> : <FiX className="h-4 w-4" />}
-                  Hình ảnh
+                  Media
                 </span>
               </div>
             </div>

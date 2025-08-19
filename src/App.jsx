@@ -17,6 +17,9 @@ import UserList from './pages/User/User';
 import UserDetail from './pages/User/DetailUser';
 import AddStep from './pages/Steps/AddSpes';
 import Reviews from './pages/Reviews/Reviews';
+import Register from './pages/Register';
+import UserDetailLayout from './pages/User/Info';
+import PackManagement from './pages/Pack/PackManagement';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,7 +34,7 @@ const AppContent = () => {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   
-  const publicRoutes = ['/', '/login'];
+  const publicRoutes = ['/', '/login', '/register'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
   return (
@@ -42,6 +45,9 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/info" element={<UserDetailLayout />} />
+        <Route path="/packs" element={<PackManagement />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recipes" element={<Recipes />} />
         <Route path="/recipes/create" element={<CreateRecipe />} />

@@ -7,7 +7,7 @@ import Loading from '../../components/Loading';
 import useAuthStore from '../../store/authStore';
 import { useApproveRecipe } from '../../hooks/useRecipes';
 
-// Hàm chuyển đổi chuỗi có dấu thành không dấu
+// Hàm chuyển đổi chuỗi có dấu thành không dấu để hỗ trợ tìm kiếm tiếng Việt
 const removeVietnameseAccents = (str) => {
   if (!str) return '';
   
@@ -30,13 +30,15 @@ const removeVietnameseAccents = (str) => {
 };
 
 const Recipes = () => {
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [showApproved, setShowApproved] = useState('all');
-  const [recipes, setRecipes] = useState([]);
+  // State quản lý phân trang và bộ lọc
+  const [page, setPage] = useState(1); // Trang hiện tại
+  const [searchTerm, setSearchTerm] = useState(''); // Từ khóa tìm kiếm
+  const [selectedCategory, setSelectedCategory] = useState(''); // Danh mục được chọn
+  const [sortBy, setSortBy] = useState('newest'); // Tiêu chí sắp xếp
+  const [showApproved, setShowApproved] = useState('all'); // Lọc theo trạng thái duyệt
+  const [recipes, setRecipes] = useState([]); // Danh sách công thức
 
+  // Hooks để điều hướng và lấy dữ liệu
   const navigate = useNavigate();
   const location = useLocation();
   const { data, isLoading, error } = useRecipes(page);
@@ -45,17 +47,17 @@ const Recipes = () => {
   const deleteRecipe = useDeleteRecipe();
   const deleteRecipeSteps = useDeleteStep();
 
-  // Handle returning from create recipe page
+  // Xử lý khi quay lại từ trang tạo công thức mới
   useEffect(() => {
     if (location.state?.fromCreateRecipe) {
-      setPage(1);
-      setShowApproved('all');
-      // Clear the state to prevent repeated resets
+      setPage(1); // Reset về trang đầu
+      setShowApproved('all'); // Hiển thị tất cả công thức
+      // Xóa state để tránh reset lặp lại
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate]);
 
-  // Update recipes when data changes
+  // Cập nhật danh sách công thức khi có dữ liệu mới
   useEffect(() => {
     if (data?.data) {
       setRecipes(data.data);
@@ -64,14 +66,15 @@ const Recipes = () => {
     }
   }, [data?.data]);
 
-  // Memoized filtered and sorted recipes với search function được cải thiện
+  // Lọc và sắp xếp công thức theo tiêu chí được chọn
   const filteredAndSortedRecipes = useMemo(() => {
     if (!recipes || recipes.length === 0) {
       return [];
     }
 
+    // Bước 1: Lọc công thức theo các tiêu chí
     let filtered = recipes.filter(recipe => {
-      // Search filter - Cải thiện để tìm kiếm cả có dấu và không dấu
+      // Lọc theo từ khóa tìm kiếm (hỗ trợ tiếng Việt có dấu và không dấu)
       let matchesSearch = true;
       if (searchTerm) {
         const searchTermNormalized = removeVietnameseAccents(searchTerm.toLowerCase());
@@ -82,17 +85,17 @@ const Recipes = () => {
                       recipeDescription.includes(searchTermNormalized);
       }
 
-      // Category filter - Sửa lại logic này
+      // Lọc theo danh mục
       let matchesCategory = true;
       if (selectedCategory) {
         if (recipe.categoryIds && Array.isArray(recipe.categoryIds)) {
-          // Trường hợp categoryIds là array of objects
+          // Xử lý trường hợp categoryIds là mảng các object
           if (recipe.categoryIds.length > 0 && typeof recipe.categoryIds[0] === 'object') {
             matchesCategory = recipe.categoryIds.some(cat =>
               cat.id === selectedCategory || cat._id === selectedCategory || cat.name === selectedCategory
             );
           }
-          // Trường hợp categoryIds là array of strings
+          // Xử lý trường hợp categoryIds là mảng các string
           else {
             matchesCategory = recipe.categoryIds.includes(selectedCategory);
           }
@@ -101,7 +104,7 @@ const Recipes = () => {
         }
       }
 
-      // Approval filter
+      // Lọc theo trạng thái duyệt
       const matchesApproval = showApproved === 'all' ||
         (showApproved === 'approved' && recipe.approvedAt) ||
         (showApproved === 'pending' && !recipe.approvedAt);
@@ -109,19 +112,19 @@ const Recipes = () => {
       return matchesSearch && matchesCategory && matchesApproval;
     });
 
-    // Sort recipes
+    // Bước 2: Sắp xếp công thức theo tiêu chí được chọn
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return new Date(b.createdAt) - new Date(a.createdAt);
+          return new Date(b.createdAt) - new Date(a.createdAt); // Mới nhất trước
         case 'oldest':
-          return new Date(a.createdAt) - new Date(b.createdAt);
+          return new Date(a.createdAt) - new Date(b.createdAt); // Cũ nhất trước
         case 'price-low':
-          return (a.price || 0) - (b.price || 0);
+          return (a.price || 0) - (b.price || 0); // Giá thấp đến cao
         case 'price-high':
-          return (b.price || 0) - (a.price || 0);
+          return (b.price || 0) - (a.price || 0); // Giá cao đến thấp
         case 'name':
-          return (a.name || '').localeCompare(b.name || '');
+          return (a.name || '').localeCompare(b.name || ''); // Sắp xếp theo tên A-Z
         default:
           return 0;
       }
@@ -130,15 +133,19 @@ const Recipes = () => {
     return filtered;
   }, [recipes, searchTerm, selectedCategory, sortBy, showApproved]);
 
-  // Handlers
+  // Các hàm xử lý sự kiện
+  
+  // Xử lý chuyển trang
   const handlePageChange = useCallback((newPage) => {
     setPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Cuộn lên đầu trang mượt mà
   }, []);
 
+  // Xử lý duyệt công thức
   const handleApprove = useCallback((recipeId) => {
     approveMutation.mutate(recipeId, {
       onSuccess: () => {
+        // Cập nhật state local để UI phản hồi ngay lập tức
         setRecipes(prevRecipes =>
           prevRecipes.map(recipe =>
             recipe._id === recipeId
@@ -154,27 +161,31 @@ const Recipes = () => {
     });
   }, [approveMutation]);
 
+  // Xử lý chỉnh sửa công thức
   const handleEditRecipe = useCallback((recipeId) => {
     navigate(`/recipes/edit/${recipeId}`);
   }, [navigate]);
 
+  // Xử lý xóa công thức
   const handleDeleteRecipe = useCallback(async (recipeId) => {
+    // Xác nhận trước khi xóa
     if (!window.confirm('Bạn có chắc muốn xóa công thức này và tất cả các bước của nó không?')) {
       return;
     }
 
     try {
-      // Try to delete steps first, but don't fail if it doesn't work
+      // Bước 1: Thử xóa các bước của công thức trước (không bắt buộc thành công)
       try {
         await deleteRecipeSteps.mutateAsync(recipeId);
       } catch (stepError) {
         console.warn('Failed to delete steps (this might be expected if cascade delete is set up):', stepError);
-        // Continue with recipe deletion even if step deletion fails
+        // Tiếp tục xóa công thức ngay cả khi xóa bước thất bại
       }
 
-      // Delete the recipe
+      // Bước 2: Xóa công thức
       deleteRecipe.mutate(recipeId, {
         onSuccess: () => {
+          // Cập nhật UI bằng cách loại bỏ công thức khỏi danh sách
           setRecipes(prevRecipes => prevRecipes.filter(recipe => recipe._id !== recipeId));
         },
         onError: (error) => {
@@ -188,7 +199,7 @@ const Recipes = () => {
     }
   }, [deleteRecipe, deleteRecipeSteps]);
 
-  // Loading and error states
+  // Xử lý trạng thái loading và lỗi
   if (isLoading) return <Loading />;
   if (error) {
     return (
@@ -198,12 +209,13 @@ const Recipes = () => {
     );
   }
 
+  // Tính toán thông tin phân trang và kiểm tra có công thức nào không
   const totalPages = data?.pagination?.totalPages || 1;
   const hasRecipes = filteredAndSortedRecipes && filteredAndSortedRecipes.length > 0;
 
   return (
     <div className="container mx-auto px-4 py-8 pt-20 md:pl-72">
-      {/* Header */}
+      {/* Header - Tiêu đề trang và nút tạo công thức mới */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Công thức nấu ăn</h1>
         {isAuthenticated && (
@@ -218,7 +230,7 @@ const Recipes = () => {
         )}
       </div>
 
-      {/* Search */}
+      {/* Thanh tìm kiếm */}
       <div className="relative mb-6">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <FiSearch className="h-5 w-5 text-gray-400" />
@@ -232,7 +244,7 @@ const Recipes = () => {
         />
       </div>
 
-      {/* Filters */}
+      {/* Bộ lọc - Component riêng để lọc theo danh mục, sắp xếp, trạng thái */}
       <RecipeFilters
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
@@ -242,21 +254,22 @@ const Recipes = () => {
         onApprovedChange={setShowApproved}
       />
 
-      {/* Results */}
+      {/* Hiển thị kết quả */}
       {!hasRecipes ? (
+        // Thông báo khi không tìm thấy công thức nào
         <div className="text-center py-8">
           <p className="text-gray-500">Không tìm thấy công thức nào phù hợp.</p>
         </div>
       ) : (
         <>
-          {/* Results count */}
+          {/* Hiển thị số lượng kết quả */}
           <div className="mb-4">
             <p className="text-sm text-gray-600">
               Hiển thị {filteredAndSortedRecipes.length} công thức
             </p>
           </div>
 
-          {/* Recipe cards */}
+          {/* Danh sách các card công thức */}
           <div className="flex flex-col gap-6">
             {filteredAndSortedRecipes.map((recipe) => (
               <RecipeCard
@@ -269,7 +282,7 @@ const Recipes = () => {
             ))}
           </div>
 
-          {/* Pagination */}
+          {/* Phân trang - Chỉ hiển thị khi có nhiều hơn 1 trang */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-8">
               <div className="flex gap-1">
@@ -278,8 +291,8 @@ const Recipes = () => {
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
                     className={`px-3 py-1 rounded-md transition-colors ${pageNum === page
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                        ? 'bg-amber-600 text-white' // Trang hiện tại
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300' // Các trang khác
                       }`}
                   >
                     {pageNum}
@@ -294,26 +307,51 @@ const Recipes = () => {
   );
 };
 
-// Separate RecipeCard component for better organization
+// Component RecipeCard riêng để hiển thị thông tin từng công thức
 const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
+  // Tìm hình ảnh đầu tiên trong mảng imageUrls (bỏ qua video)
+  const getFirstImage = (imageUrls) => {
+    if (!imageUrls || !Array.isArray(imageUrls)) {
+      return 'https://via.placeholder.com/150';
+    }
+    
+    // Tìm file đầu tiên không phải là video (.mp4, .webm, .avi, .mov)
+    const firstImage = imageUrls.find(url => {
+      if (!url) return false;
+      const urlLower = url.toLowerCase();
+      return !urlLower.includes('.mp4') && 
+             !urlLower.includes('.webm') && 
+             !urlLower.includes('.avi') && 
+             !urlLower.includes('.mov');
+    });
+    
+    return firstImage || 'https://via.placeholder.com/150';
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden p-4 hover:shadow-lg transition-shadow">
       <div className="flex mb-4">
+        {/* Hình ảnh công thức */}
         <img
-          src={recipe.imageUrls?.[0] || 'https://via.placeholder.com/150'}
+          src={getFirstImage(recipe.imageUrls)}
           alt={recipe.name || 'Recipe image'}
           className="w-32 h-32 object-cover rounded-md mr-4 flex-shrink-0"
-          loading="lazy"
+          loading="lazy" // Lazy loading để tối ưu hiệu suất
         />
+        
+        {/* Thông tin công thức */}
         <div className="flex-1 min-w-0">
+          {/* Tên công thức */}
           <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">
             {recipe.name || 'Untitled Recipe'}
           </h3>
+          
+          {/* Mô tả */}
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {recipe.description || 'No description available'}
           </p>
 
-          {/* Recipe meta info */}
+          {/* Thông tin meta (thời gian nấu, số người ăn) */}
           <div className="flex flex-wrap gap-3 mb-4">
             <div className="flex items-center text-gray-500 text-sm">
               <FiClock className="mr-1 flex-shrink-0" />
@@ -325,8 +363,9 @@ const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Các nút hành động */}
           <div className="flex justify-between items-center">
+            {/* Link xem chi tiết */}
             <Link
               to={`/recipes/${recipe._id}`}
               className="text-amber-600 hover:text-amber-700 font-medium text-sm transition-colors"
@@ -334,8 +373,9 @@ const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
               Xem chi tiết
             </Link>
 
+            {/* Các nút chỉnh sửa và xóa */}
             <div className="flex gap-2">
-
+              {/* Nút chỉnh sửa */}
               <button
                 onClick={() => onEdit(recipe._id)}
                 className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
@@ -344,6 +384,7 @@ const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
                 <FiEdit className="h-5 w-5" />
               </button>
 
+              {/* Nút xóa */}
               <button
                 onClick={() => onDelete(recipe._id)}
                 className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
@@ -354,14 +395,12 @@ const RecipeCard = React.memo(({ recipe, onEdit, onDelete }) => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Status badge */}
-      
+      </div> 
     </div>
   );
 });
 
+// Đặt tên hiển thị cho component để dễ debug
 RecipeCard.displayName = 'RecipeCard';
 
 export default Recipes;

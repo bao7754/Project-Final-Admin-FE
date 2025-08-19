@@ -34,8 +34,9 @@ const Sidebar = () => {
     { name: 'Danh mục', icon: <FiHome />, path: '/categories', type: 'link' },
     { name: 'Công thức', icon: <FiBook />, path: '/recipes', type: 'link' },
     { name: 'Đánh giá', icon: <FiStar />, path: '/reviews', type: 'link' },
+    { name: 'Gói', icon: <FiBook />, path: '/packs', type: 'link' },
     { name: 'Người dùng', icon: <FiUsers />, path: '/users', type: 'link' },
-
+    { name: 'Thông tin', icon: <FiUsers />, path: '/info', type: 'link' },
     { name: 'Đăng xuất', icon: <FiLogOut />, path: '#', type: 'action', action: handleLogout },
   ];
 

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { recipesApi } from '../api';
+import axios from 'axios';
+
 
 export const useRecipes = (page = 1, limit = 999) => {
   return useQuery({
@@ -8,16 +10,21 @@ export const useRecipes = (page = 1, limit = 999) => {
     queryFn: async () => {
       try {
         console.log('Fetching recipes for page:', page, 'limit:', limit);
-        const response = await recipesApi.getRecipes(page, limit);
-        console.log('Recipes API response:', response);
-        if (!response || !response.data) {
+        
+        const response = await axios.get(`https://thangphan300724.id.vn/api/recipes/?page=${page}&limit=${limit}`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        console.log('Recipes API response:', response.data);
+        
+        if (!response.data || !response.data.data) {
           console.error(
             'Invalid API response, expected { data: [], pagination: {} }:',
-            response
+            response.data
           );
           return { data: [], pagination: { totalPages: 1, currentPage: page } };
         }
-        return response;
+        return response.data;
       } catch (error) {
         console.error(
           'Error fetching recipes:',

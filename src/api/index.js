@@ -28,6 +28,10 @@ export const authApi = {
     const { data } = await api.post('/api/admins/login', credentials);
     return data;
   },
+  register: async (userData) => {
+    const { data } = await api.post('/api/admins/register', userData);
+    return data;
+  },
 
   getCurrentUser: async () => {
     const { data } = await api.get('/api/admins');
@@ -35,6 +39,11 @@ export const authApi = {
   },
   getUserById: async (id) => {
     const { data } = await api.get(`/api/admins/${id}`);
+    return data;
+  },
+  // Thêm vào authApi
+  updateUser: async (id, userData) => {
+    const { data } = await api.put(`/api/admins/${id}`, userData);
     return data;
   },
 };
@@ -170,4 +179,26 @@ export const premiumUsers = {
     const { data } = await api.get('/api/admins/analytics');
     return data;
   },
+};
+
+export const packApi = {
+  getPacks: async () => {
+    const { data } = await api.get('/api/premium/pack');
+    return data;
+  },
+
+  createPack: async (packData) => {
+    const { data } = await api.post('/api/premium/pack', packData);
+    return data;
+  },
+
+  updatePack: async (id, packData) => {
+    const { data } = await api.put(`/api/premium/pack/${id}`, packData);
+    return data;
+  },
+
+  deletePack: async (id) => {
+    const { data } = await api.delete(`/api/premium/pack/${id}`);
+    return data;
+  }
 };

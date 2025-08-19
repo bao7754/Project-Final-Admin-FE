@@ -6,7 +6,7 @@ import useAuthStore from '../store/authStore';
 
 export const useAuth = () => {
   const { user, token, setAuth, logout, isAuthenticated } = useAuthStore();
-  console.log("Token in useAuth:", token);
+  console.log('Token in useAuth:', token);
   const { isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: authApi.getCurrentUser,
@@ -21,8 +21,9 @@ export const useAuth = () => {
       if (isAuthenticated) {
         logout();
       }
-    }
-  }); return { user, isLoading, isAuthenticated, logout };
+    },
+  });
+  return { user, isLoading, isAuthenticated, logout };
 };
 
 export const useLogin = () => {
@@ -33,15 +34,41 @@ export const useLogin = () => {
     mutationFn: (credentials) => authApi.login(credentials),
     onSuccess: (data) => {
       console.log('Login success, data:', data);
-      setAuth(data.user, data.token);
+      
+      const user = data.admin || data.user || { email: data.email };
+      console.log('User data:', user);
+      
+      // Lưu thông tin auth vào store
+      setAuth(user, data.token);
+      
+      // Lưu token và user ID vào localStorage
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userId', user.id);
+      
+      // Optional: Lưu thêm thông tin user khác nếu cần
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userRole', data.admin ? 'admin' : 'user');
+      
       toast.success('Đăng nhập thành công!');
       navigate('/dashboard');
     },
     onError: () => {
-      toast.error(
-        'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.'
-      );
+      toast.error('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
+    },
+  });
+};
+export const useRegister = () => {
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: (userData) => authApi.register(userData),
+    onSuccess: (data) => {
+      console.log('Register success, data:', data);
+      toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
+      navigate('/login');
+    },
+
+    onError: () => {
+      toast.error('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin đăng ký.');
     },
   });
 };
@@ -78,10 +105,24 @@ export const useUserDetail = (id) => {
   });
 };
 
+export const useUpdateUser = () => {
+  return useMutation({
+    mutationFn: ({ id, userData }) => authApi.updateUser(id, userData),
+    onSuccess: (data) => {
+      console.log('Update user success, data:', data);
+      toast.success('Cập nhật thông tin thành công!');
+    },
+    onError: (error) => {
+      console.error('Error updating user:', error);
+      toast.error('Cập nhật thông tin thất bại: ' + (error.response?.data?.message || error.message));
+    },
+  });
+};
+
 export const usepremiumUsers = () => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useQuery({
     queryKey: ['premium'],
-    queryFn: () => premiumUsers.premiumUsers()
-  })
-}
+    queryFn: () => premiumUsers.premiumUsers(),
+  });
+};

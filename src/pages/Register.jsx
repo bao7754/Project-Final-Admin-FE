@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FiMail, FiLock } from 'react-icons/fi';
-import { useLogin } from '../hooks/useAuth';
+import { FiMail, FiLock, FiUser } from 'react-icons/fi';
+import { useRegister } from '../hooks/useAuth';
 
-const Login = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
-  const loginMutation = useLogin();
+const Register = () => {
+  const { register, handleSubmit, formState: { errors }, watch } = useForm();
+  const registerMutation = useRegister();
   const [showSlogan, setShowSlogan] = useState(false);
 
+  const password = watch('password'); 
+
   const onSubmit = (data) => {
-    // Hiển thị slogan
     setShowSlogan(true);
-    
-    // Sau 2 giây thì ẩn slogan và thực hiện login
+  
     setTimeout(() => {
       setShowSlogan(false);
-      loginMutation.mutate(data);
+      // eslint-disable-next-line no-unused-vars
+      const { confirmPassword, ...submitData } = data;
+      registerMutation.mutate(submitData);
     }, 1000);
   };
 
@@ -32,12 +34,6 @@ const Login = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-3xl p-8 mx-4 max-w-md w-full shadow-2xl border-4 border-orange-500 animate-pulse">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-orange-600 mb-3">
-                Hãy đem đến những món ăn chất lượng nhất
-              </h3>
-              <p className="text-lg font-semibold text-red-500">
-                Đậm đà hương vị Việt
-              </p>
               <div className="mt-4 flex justify-center">
                 <div className="w-8 h-8 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
               </div>
@@ -58,11 +54,46 @@ const Login = () => {
           </div>
           <div className="p-8">
             <div className="text-center mb-8">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Đăng nhập</h2>
-              <p className="text-gray-500 text-sm">Quản lý công thức nấu ăn của bạn</p>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Đăng ký tài khoản</h2>
+              <p className="text-gray-500 text-sm">Tạo tài khoản để quản lý công thức nấu ăn</p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  👤 Họ và tên
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-4 flex items-center text-gray-400">
+                    <FiUser className="h-5 w-5" />
+                  </span>
+                  <input
+                    id="name"
+                    type="text"
+                    autoComplete="name"
+                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${
+                      errors.name
+                        ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                        : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
+                    } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
+                    placeholder="Nguyễn Văn A"
+                    {...register('name', {
+                      required: 'Họ và tên là bắt buộc',
+                      minLength: {
+                        value: 2,
+                        message: 'Họ và tên phải có ít nhất 2 ký tự',
+                      },
+                    })}
+                  />
+                </div>
+                {errors.name && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                    <span>❌</span>
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   📧 Email
@@ -109,7 +140,7 @@ const Login = () => {
                   <input
                     id="password"
                     type="password"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${
                       errors.password
                         ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
@@ -132,15 +163,49 @@ const Login = () => {
                   </p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  🔒 Xác nhận mật khẩu
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-4 flex items-center text-gray-400">
+                    <FiLock className="h-5 w-5" />
+                  </span>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    className={`block w-full rounded-2xl pl-12 pr-4 py-4 border-2 transition-all duration-300 bg-gray-50/50 focus:bg-white ${
+                      errors.confirmPassword
+                        ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                        : 'border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10'
+                    } placeholder-gray-400 text-gray-900 focus:outline-none text-sm font-medium`}
+                    placeholder="••••••••"
+                    {...register('confirmPassword', {
+                      required: 'Xác nhận mật khẩu là bắt buộc',
+                      validate: (value) =>
+                        value === password || 'Mật khẩu xác nhận không khớp',
+                    })}
+                  />
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                    <span>❌</span>
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
               <button
                 type="submit"
-                disabled={loginMutation.isPending || showSlogan}
+                disabled={registerMutation.isPending || showSlogan}
                 className="w-full py-4 px-6 rounded-2xl text-white font-bold bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none text-sm"
               >
-                {loginMutation.isPending ? (
+                {registerMutation.isPending ? (
                   <span className="flex items-center justify-center gap-3">
                     <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span>Đang đăng nhập... </span>
+                    <span>Đang tạo tài khoản... </span>
                   </span>
                 ) : showSlogan ? (
                   <span className="flex items-center justify-center gap-3">
@@ -149,7 +214,7 @@ const Login = () => {
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
-                    Đăng nhập
+                    Tạo tài khoản
                   </span>
                 )}
               </button>
@@ -161,13 +226,13 @@ const Login = () => {
             </div>
             <div className="text-center">
               <p className="text-gray-600 text-sm mb-4">
-                Chưa có tài khoản?
+                Đã có tài khoản?
               </p>
               <a
-                href="/register"
+                href="/login"
                 className="w-full inline-block py-3 px-6 rounded-2xl text-orange-600 font-bold bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
               >
-                Tạo tài khoản mới
+                Đăng nhập ngay
               </a>
             </div>
           </div>
@@ -177,4 +242,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
