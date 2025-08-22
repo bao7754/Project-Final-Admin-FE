@@ -1,30 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUserDetail, useUpdateUser } from './../../hooks/useAuth';
+import { useUploadImage } from './../../hooks/useUploadImage';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { User, Mail, Edit2, Save, X, Calendar, Clock, RefreshCw, Settings } from 'lucide-react';
+import { User, Mail, Edit2, Save, X, Calendar, Clock, RefreshCw, Settings, Camera, Upload } from 'lucide-react';
 
 const UserDetailLayout = ({ userId: propUserId }) => {
   const userId = propUserId || localStorage.getItem('userId');
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef(null);
+  
   const [formData, setFormData] = useState({
     fullName: '',
-    email: ''
+    email: '',
+    avatar: ''
   });
   
   const queryClient = useQueryClient();
   const { data: user, isLoading, error } = useUserDetail(userId);
-  
   const updateMutation = useUpdateUser();
+  const uploadImageMutation = useUploadImage();
 
   useEffect(() => {
     if (user) {
       setFormData({
         fullName: user.fullName || '',
-        email: user.email || ''
+        email: user.email || '',
+        avatar: user.avatar || ''
       });
     }
   }, [user]);
+
+  // Validate avatar file
+  const validateAvatarFile = (file) => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (!file) {
+      return { isValid: false, error: 'Không có file được chọn' };
+    }
+
+    const fileType = file.type.toLowerCase();
+    if (!allowedTypes.includes(fileType)) {
+      return { 
+        isValid: false, 
+        error: 'Định dạng file không được hỗ trợ. Chỉ chấp nhận JPG, PNG, WebP' 
+      };
+    }
+    
+    if (file.size > maxSize) {
+      return { 
+        isValid: false, 
+        error: 'File ảnh quá lớn. Kích thước tối đa là 5MB' 
+      };
+    }
+
+    if (!file.name || file.name.length > 255) {
+      return { isValid: false, error: 'Tên file không hợp lệ' };
+    }
+    
+    return { isValid: true };
+  };
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+
+    const validation = validateAvatarFile(file);
+    if (!validation.isValid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+      
+      const response = await new Promise((resolve, reject) => {
+        uploadImageMutation.mutate(formData, {
+          onSuccess: (response) => {
+            let avatarUrl;
+            
+            if (Array.isArray(response)) {
+              if (response.length > 0 && response[0]?.url) {
+                avatarUrl = response[0].url;
+              } else if (response.length > 0) {
+                avatarUrl = response[0];
+              }
+            }
+            else if (response?.data?.url) {
+              avatarUrl = response.data.url;
+            } else if (response?.url) {
+              avatarUrl = response.url;
+            } else if (response?.data?.filePath) {
+              avatarUrl = response.data.filePath;
+            } else if (response?.filePath) {
+              avatarUrl = response.filePath;
+            } else if (typeof response === 'string') {
+              avatarUrl = response;
+            } else {
+              avatarUrl = response?.data || response;
+            }
+            
+            resolve(avatarUrl);
+          },
+          onError: (error) => {
+            reject(error);
+          }
+        });
+      });
+      
+      if (response) {
+        // Update avatar in form data
+        setFormData(prev => ({ ...prev, avatar: response }));
+        
+        // Auto-save avatar
+        try {
+          await updateMutation.mutateAsync({
+            id: userId,
+            userData: { ...formData, avatar: response }
+          });
+          
+          queryClient.invalidateQueries({ queryKey: ['userDetail', userId] });
+          toast.success('Cập nhật avatar thành công!');
+        } catch (updateError) {
+          console.error('Update avatar failed:', updateError);
+          toast.error('Lỗi khi cập nhật avatar');
+        }
+      } else {
+        throw new Error('Không nhận được URL ảnh từ server');
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      const errorMsg = error?.response?.data?.message || 
+                      error?.response?.data?.error ||
+                      error.message || 
+                      'Lỗi upload avatar không xác định';
+      toast.error(`Lỗi upload avatar: ${errorMsg}`);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -35,7 +154,8 @@ const UserDetailLayout = ({ userId: propUserId }) => {
     if (user) {
       setFormData({
         fullName: user.fullName || '',
-        email: user.email || ''
+        email: user.email || '',
+        avatar: user.avatar || ''
       });
     }
   };
@@ -154,16 +274,59 @@ const UserDetailLayout = ({ userId: propUserId }) => {
 
   const isFormChanged = () => {
     return formData.fullName !== (user.fullName || '') || 
-           formData.email !== user.email;
+           formData.email !== user.email ||
+           formData.avatar !== (user.avatar || '');
   };
 
   return (
     <div className="pt-20 pb-8 min-h-screen bg-gray-50">
-   <div className="ml-64 mr-8 px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="ml-64 mr-8 px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-4">
-           
+              {/* Avatar Section */}
+              <div className="relative">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white/30 shadow-lg">
+                  <img
+                    src={formData.avatar || user.avatar || 'https://icons.veryicon.com/png/o/miscellaneous/rookie-official-icon-gallery/225-default-avatar.png'}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://icons.veryicon.com/png/o/miscellaneous/rookie-official-icon-gallery/225-default-avatar.png';
+                    }}
+                  />
+                </div>
+                
+                {/* Avatar Upload Button */}
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isUploadingAvatar}
+                  className="absolute -bottom-2 -right-2 bg-white hover:bg-gray-50 disabled:bg-gray-100 text-blue-600 p-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:cursor-not-allowed border-2 border-blue-100"
+                  title="Thay đổi avatar"
+                >
+                  {isUploadingAvatar ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </button>
+                
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={(e) => handleAvatarUpload(e.target.files[0])}
+                  className="hidden"
+                  ref={avatarInputRef}
+                  disabled={isUploadingAvatar}
+                />
+              </div>
+              
+              <div className="text-white">
+                <h1 className="text-xl sm:text-2xl font-bold">
+                  {user.fullName || 'Chưa cập nhật tên'}
+                </h1>
+                <p className="text-blue-100 text-sm sm:text-base">{user.email}</p>
+              </div>
             </div>
             
             {!isEditing ? (
@@ -325,13 +488,16 @@ const UserDetailLayout = ({ userId: propUserId }) => {
         </div>
       </div>
 
-      {updateMutation.isPending && (
+      {/* Loading Overlay */}
+      {(updateMutation.isPending || isUploadingAvatar) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-8 shadow-2xl border border-gray-200 max-w-sm w-full mx-4">
             <div className="text-center space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto"></div>
               <div>
-                <h3 className="font-semibold text-gray-800">Đang cập nhật</h3>
+                <h3 className="font-semibold text-gray-800">
+                  {isUploadingAvatar ? 'Đang tải avatar' : 'Đang cập nhật'}
+                </h3>
                 <p className="text-gray-600 text-sm mt-1">Vui lòng đợi trong giây lát...</p>
               </div>
             </div>

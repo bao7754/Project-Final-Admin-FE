@@ -179,6 +179,10 @@ export const premiumUsers = {
     const { data } = await api.get('/api/admins/analytics');
     return data;
   },
+  analyticsPremium: async () => {
+    const { data } = await api.get('/api/admins/analytics-premium');
+    return data;
+  },
 };
 
 export const packApi = {
@@ -200,5 +204,9 @@ export const packApi = {
   deletePack: async (id) => {
     const { data } = await api.delete(`/api/premium/pack/${id}`);
     return data;
-  }
+  },
+  getPackById: async (id) => {
+    const { data } = await api.get(`/api/premium/pack/${id}`);
+    return data;
+  },
 };

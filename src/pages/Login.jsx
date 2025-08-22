@@ -154,22 +154,6 @@ const Login = () => {
                 )}
               </button>
             </form>
-            <div className="my-6 flex items-center">
-              <div className="flex-1 border-t border-gray-200"></div>
-              <span className="px-4 text-sm text-gray-500 bg-white">hoặc</span>
-              <div className="flex-1 border-t border-gray-200"></div>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-600 text-sm mb-4">
-                Chưa có tài khoản?
-              </p>
-              <a
-                href="/register"
-                className="w-full inline-block py-3 px-6 rounded-2xl text-orange-600 font-bold bg-orange-50 hover:bg-orange-100 border-2 border-orange-200 hover:border-orange-300 transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
-              >
-                Tạo tài khoản mới
-              </a>
-            </div>
           </div>
         </div>
       </div>

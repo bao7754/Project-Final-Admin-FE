@@ -13,7 +13,9 @@ import {
   FiUsers,
   FiActivity,
   FiDollarSign,
-  FiAward
+  FiAward,
+  FiPackage,
+  FiCreditCard
 } from 'react-icons/fi';
 import {
   LineChart,
@@ -34,7 +36,8 @@ import {
 } from 'recharts';
 import { useRecipes } from '../hooks/useRecipes';
 import { useFavorites } from '../hooks/userFavorites';
-import { usepremiumUsers } from '../hooks/useAuth'; 
+import { usepremiumUsers, useAnalyticsPremium } from '../hooks/useAuth'; 
+import { packApi } from '../api/index'; // Import API function
 import Loading from '../components/Loading';
 
 const Dashboard = () => {
@@ -42,9 +45,12 @@ const Dashboard = () => {
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   // Sử dụng đúng hook để lấy dữ liệu premium users
   const { data: premiumData, isLoading: premiumLoading } = usepremiumUsers();
+  // Thêm hook cho analytics premium
+  const { data: analyticsData, isLoading: analyticsLoading } = useAnalyticsPremium();
 
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [packDetails, setPackDetails] = useState({});
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -67,6 +73,37 @@ const Dashboard = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Fetch pack details for analytics data
+  useEffect(() => {
+    const fetchPackDetails = async () => {
+      if (analyticsData && Array.isArray(analyticsData)) {
+        const packIds = [];
+        analyticsData.forEach(monthData => {
+          if (monthData.packs) {
+            monthData.packs.forEach(pack => {
+              if (pack.pack_id && pack.pack_id !== null && !packIds.includes(pack.pack_id)) {
+                packIds.push(pack.pack_id);
+              }
+            });
+          }
+        });
+
+        const packDetailsMap = {};
+        for (const packId of packIds) {
+          try {
+            const packDetail = await packApi.getPackById(packId);
+            packDetailsMap[packId] = packDetail;
+          } catch (error) {
+            console.error(`Failed to fetch pack details for ${packId}:`, error);
+          }
+        }
+        setPackDetails(packDetailsMap);
+      }
+    };
+
+    fetchPackDetails();
+  }, [analyticsData]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -86,6 +123,77 @@ const Dashboard = () => {
       currency: 'VND'
     }).format(amount);
   };
+
+  // Process premium analytics data
+  const premiumAnalytics = useMemo(() => {
+    if (!analyticsData || !Array.isArray(analyticsData)) {
+      return {
+        totalPremiumSubscriptions: 0,
+        totalRevenue: 0,
+        packStats: [],
+        monthlyData: [],
+        validPacksOnly: []
+      };
+    }
+
+    let totalPremiumSubscriptions = 0;
+    let totalRevenue = 0;
+    const packStatsMap = {};
+    const monthlyData = [];
+
+    analyticsData.forEach(monthData => {
+      const monthStr = `${monthData._id.month}/${monthData._id.year}`;
+      let monthlyRevenue = 0;
+      let monthlyValidCount = 0;
+
+      if (monthData.packs) {
+        monthData.packs.forEach(pack => {
+          // Chỉ thống kê các pack có pack_id hợp lệ (không null)
+          if (pack.pack_id && pack.pack_id !== null) {
+            const packDetail = packDetails[pack.pack_id];
+            const packPrice = packDetail?.price || 20000; // Default price if not found
+            const packName = packDetail?.name || pack.pack_name || 'Unknown Pack';
+
+            totalPremiumSubscriptions += pack.count;
+            const packRevenue = pack.count * packPrice;
+            totalRevenue += packRevenue;
+            monthlyRevenue += packRevenue;
+            monthlyValidCount += pack.count;
+
+            // Update pack statistics
+            if (packStatsMap[pack.pack_id]) {
+              packStatsMap[pack.pack_id].count += pack.count;
+              packStatsMap[pack.pack_id].revenue += packRevenue;
+            } else {
+              packStatsMap[pack.pack_id] = {
+                id: pack.pack_id,
+                name: packName,
+                count: pack.count,
+                price: packPrice,
+                revenue: packRevenue
+              };
+            }
+          }
+        });
+      }
+
+      monthlyData.push({
+        month: monthStr,
+        count: monthlyValidCount,
+        revenue: monthlyRevenue
+      });
+    });
+
+    const packStats = Object.values(packStatsMap).sort((a, b) => b.count - a.count);
+
+    return {
+      totalPremiumSubscriptions,
+      totalRevenue,
+      packStats,
+      monthlyData: monthlyData.reverse(), // Show newest first
+      validPacksOnly: packStats
+    };
+  }, [analyticsData, packDetails]);
 
   // Computed statistics
   const stats = useMemo(() => {
@@ -115,9 +223,8 @@ const Dashboard = () => {
     const totalUsers = premiumData?.totalUsers || 0;
     const totalCookedRecipes = premiumData?.totalCookedRecipes || 0;
     
-    // Tính toán doanh thu dựa trên số premium users
-    const premiumPrice = 20000; // 20,000 VND per premium user
-    const totalRevenue = totalPremiumUsers * premiumPrice;
+    // Tính toán doanh thu dựa trên premium analytics
+    const totalRevenue = premiumAnalytics.totalRevenue;
     const premiumRate = totalUsers > 0 ? Math.round((totalPremiumUsers / totalUsers) * 100) : 0;
 
     // Calculate trend data (last 7 days)
@@ -192,15 +299,17 @@ const Dashboard = () => {
       totalRevenue,
       premiumRate
     };
-  }, [data, favoritesData, premiumData]);
+  }, [data, favoritesData, premiumData, premiumAnalytics]);
 
-  if (isLoading || favoritesLoading || premiumLoading) return <Loading />;
+  if (isLoading || favoritesLoading || premiumLoading || analyticsLoading) return <Loading />;
 
   const latestRecipes = [...(data?.data || [])].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   ).slice(0, 10);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  const PACK_COLORS = ['#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981'];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 pt-20 md:pl-72">
@@ -230,7 +339,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Updated Stats Cards with Premium Users */}
+        {/* Updated Stats Cards with Premium Analytics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
             <div className="flex items-center">
@@ -242,6 +351,200 @@ const Dashboard = () => {
                 <p className="text-2xl font-bold text-gray-900">{stats.totalRecipes}</p>
               </div>
             </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
+            <div className="flex items-center">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <FiPackage className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Gói đã bán</p>
+                <p className="text-2xl font-bold text-gray-900">{premiumAnalytics.totalPremiumSubscriptions}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+            <div className="flex items-center">
+              <div className="p-3 bg-yellow-100 rounded-lg">
+                <FiDollarSign className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Tổng doanh thu</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Premium Pack Analytics Section */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+          {/* Pack Distribution Chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <div className="p-2 bg-cyan-100 rounded-lg mr-3">
+                <FiPackage className="h-5 w-5 text-cyan-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Phân bố gói Premium</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={premiumAnalytics.packStats}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {premiumAnalytics.packStats?.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PACK_COLORS[index % PACK_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value, name) => [value + ' gói', name]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Monthly Revenue Trend */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <div className="p-2 bg-green-100 rounded-lg mr-3">
+                <FiTrendingUp className="h-5 w-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Doanh thu theo tháng</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={premiumAnalytics.monthlyData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="month" stroke="#6B7280" fontSize={12} />
+                <YAxis stroke="#6B7280" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value, name) => {
+                    if (name === 'revenue') {
+                      return [formatCurrency(value), 'Doanh thu'];
+                    }
+                    return [value + ' gói', 'Số lượng'];
+                  }}
+                />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  fill="url(#colorRevenue)"
+                  name="Doanh thu"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Premium Pack Details Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
+          <div className="px-6 py-4 bg-gray-50 border-b">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                <FiCreditCard className="h-5 w-5 text-purple-600" />
+              </div>
+              Chi tiết gói Premium
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tên gói
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Giá
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Đã bán
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Doanh thu
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {premiumAnalytics.packStats.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="p-3 bg-gray-100 rounded-full mb-3">
+                          <FiPackage className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500">Chưa có dữ liệu gói Premium</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  premiumAnalytics.packStats.map((pack, index) => {
+                    return (
+                      <tr key={pack.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div 
+                              className="h-3 w-3 rounded-full mr-3"
+                              style={{ backgroundColor: PACK_COLORS[index % PACK_COLORS.length] }}
+                            ></div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {pack.name}
+                              </div>
+                            
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatCurrency(pack.price)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {pack.count} gói
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-green-600">
+                            {formatCurrency(pack.revenue)}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -288,7 +591,6 @@ const Dashboard = () => {
                   fill="url(#colorRecipes)"
                   name="Tổng số công thức"
                 />
-        
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -338,24 +640,23 @@ const Dashboard = () => {
             <div>
               <h3 className="text-xl font-semibold mb-2">Tổng quan doanh thu Premium</h3>
               <p className="text-emerald-100 mb-4">
-                Doanh thu {stats.totalPremiumUsers} người dùng Premium
+                Doanh thu từ {premiumAnalytics.totalPremiumSubscriptions} gói đã bán
               </p>
               <div className="text-3xl font-bold mb-2">
                 {formatCurrency(stats.totalRevenue)}
               </div>
             </div>
             <div className="text-right">
-              <div className="p-4  bg-opacity-20 rounded-lg">
-                <FiDollarSign className="h-12 w-12 mx-auto mb-2" />
-                <p className="text-sm">Giá Premium</p>
-                <p className="font-bold">20.000đ</p>
+              <div className="p-4 bg-white bg-opacity-20 rounded-lg">
+                <FiAward className="h-12 w-12 mx-auto mb-2" />
+                <p className="text-sm">Gói bán chạy</p>
+                <p className="font-bold">
+                  {premiumAnalytics.packStats[0]?.name || 'Chưa có'}
+                </p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Simplified Popular Recipes */}
-        
 
         {/* Simplified Latest Recipes Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">

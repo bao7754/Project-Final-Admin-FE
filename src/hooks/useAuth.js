@@ -126,3 +126,11 @@ export const usepremiumUsers = () => {
     queryFn: () => premiumUsers.premiumUsers(),
   });
 };
+
+export const useAnalyticsPremium = () => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useQuery({
+    queryKey: ['analyticsPremium'],
+    queryFn: () => premiumUsers.analyticsPremium(),
+  });
+}
