@@ -647,7 +647,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="text-right">
-              <div className="p-4 bg-white bg-opacity-20 rounded-lg">
+              <div className="p-4 bg-opacity-20 rounded-lg">
                 <FiAward className="h-12 w-12 mx-auto mb-2" />
                 <p className="text-sm">Gói bán chạy</p>
                 <p className="font-bold">
